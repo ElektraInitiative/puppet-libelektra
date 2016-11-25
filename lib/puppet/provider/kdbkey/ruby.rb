@@ -1,18 +1,18 @@
 
 module Puppet
-  Type.type(:kdbkey).provide :libelektra do
+  Type.type(:kdbkey).provide :ruby do
     desc "kdb through libelektra Ruby API"
 
     require 'kdb'
 
-    puts "libelektra provider"
+    puts "ruby provider"
 
     #confine :true => true
     #confine :exists => "/etc/debian_version"
     confine :true => true
 
     def create
-      puts "libelektra create"
+      puts "ruby create"
       Kdb.open do |db|
         ks = Kdb::KeySet.new
         db.get ks, "/"
@@ -23,7 +23,7 @@ module Puppet
     end
 
     def destroy
-      puts "libelektra destroy"
+      puts "ruby destroy"
       Kdb.open do |db|
         ks = Kdb::KeySet.new
         db.get ks, "/"
@@ -33,7 +33,7 @@ module Puppet
     end
 
     def exists?
-      puts "libelektra exists?"
+      puts "ruby exists?"
       Kdb.open do |db|
         ks =  Kdb::KeySet.new
         db.get ks, "/"
