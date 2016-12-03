@@ -38,6 +38,8 @@ module Puppet
       @@ks.delete @resource[:name]
     end
 
+    # is called first for each managed resource
+    # stores the queried key for later modifications
     def exists?
       puts "ruby exists? #{@resource[:name]}"
       @resource_key = @@ks.lookup @resource[:name]
@@ -97,16 +99,17 @@ module Puppet
       end
     end
 
-    #def clear
-    #  super
-    #  puts "ruby clear"
-    #end
 
+    # flush is call if a resource was modified
+    # thus this method is perfectly suitable for our db.set method which will
+    # finally bring the changes to disk
     def flush
       puts "ruby flush #{@resource[:name]}"
       @@db.set @@ks, "/"
     end
 
+    # this is the provider de-init hook
+    # so lets close our kdb db now
     def self.post_resource_eval
       puts "ruby post resource eval"
       @@db.close if @@have_kdb
