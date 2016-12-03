@@ -3,12 +3,9 @@ module Puppet
   Type.type(:kdbkey).provide :kdb do
     desc "kdb through kdb command"
 
-    #require 'kdb'
-
     puts "kdb provider"
 
-    #commands :kdb => "kdb"
-    confine :true => false
+    commands :kdb => "kdb"
 
     def create
       #puts "kdb create"
@@ -30,9 +27,7 @@ module Puppet
 
     def value 
       #puts "getting value"
-      output = kdb ["get", @resource[:name]]
-      output[-1] = ''
-      output
+      kdb ["sget", "--color=never", @resource[:name], "''"]
     end
 
     def value=(value)

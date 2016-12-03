@@ -9,4 +9,62 @@
 # Learn more about module testing here:
 # https://docs.puppet.com/guides/tests_smoke.html
 #
-include ::libelektra
+
+#include ::libelektra
+
+$ns = 'user/test/puppet'
+
+kdbkey { "${ns}/x1":
+  ensure => present,
+  value  => 'hello world x1 ...'
+}
+
+kdbkey { "${ns}/x2":
+  ensure => absent
+}
+
+kdbkey { "${ns}/x3":
+  ensure => present
+}
+
+kdbkey { "${ns}/x4":
+  ensure => present,
+  value  => 'x4 value ...',
+  meta   => {
+    'meta1' => 'm1 value',
+    'meta2' => 'm2 value'
+  }
+}
+
+kdbkey { "${ns}-test/section1/setting1":
+  ensure => present,
+  value  => 'hello ini world ...',
+  meta   => {
+    'comments'    => '#1',
+    'comments/#0' => '# this is the first comment line',
+    'comments/#1' => '# this is the second comment line'
+  }
+}
+
+kdbkey { "${ns}-test/section1/setting2":
+  ensure   => present,
+  value    => 'some value ...',
+  comments => '
+this setting will do the most important stuff
+with a multi line comment
+
+here comes the setting'
+}
+
+#kdbkey { "${ns}-test/section2":
+#  comments => "
+#this is just a section key with 
+#some comments
+#not really very important stuff, but
+#...ok"
+#}
+
+kdbkey { "${ns}-test/section2/setting1":
+  value  => "asdf",
+  #  before => Kdbkey["${ns}-test/section2"]
+}

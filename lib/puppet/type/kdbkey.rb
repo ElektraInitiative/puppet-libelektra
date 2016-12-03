@@ -17,6 +17,23 @@ Puppet::Type.newtype(:kdbkey) do
     #end
   end
 
+  newproperty(:meta) do
+    desc "metadata of this key"
+    
+    validate do |meta|
+      if !meta.is_a? Hash
+        raise ArgumentError, "Hash required"
+      else
+        super meta
+      end
+    end
+  end
+
+  newproperty(:comments) do
+    desc "comments for this key"
+
+  end
+
   newparam(:name) do
     desc "The fully qualified name of the key"
 
