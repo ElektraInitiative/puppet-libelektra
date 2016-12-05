@@ -28,19 +28,20 @@ kdbkey { "${ns}/x3":
 }
 
 kdbkey { "${ns}/x4":
-  ensure => present,
-  value  => 'x4 value ...',
-  meta   => {
+  ensure          => present,
+  value           => 'x4 value ...',
+  purge_meta_keys => true,
+  metadata        => {
     'meta1' => 'm1 value',
-    'meta2' => 'm2 value'
+    'meta2' => 'm2 value',
+    #'meta3' => 'm3 value'
   }
 }
 
 kdbkey { "${ns}-test/section1/setting1":
-  ensure => present,
-  value  => 'hello ini world ...',
-  meta   => {
-    'comments'    => '#1',
+  ensure   => present,
+  value    => 'hello ini world ...',
+  metadata => {
     'comments/#0' => '# this is the first comment line',
     'comments/#1' => '# this is the second comment line'
   }
@@ -52,19 +53,21 @@ kdbkey { "${ns}-test/section1/setting2":
   comments => '
 this setting will do the most important stuff
 with a multi line comment
-
-here comes the setting'
+here comes the setting
+m line1
+m line2'
 }
 
 #kdbkey { "${ns}-test/section2":
 #  comments => "
-#this is just a section key with 
+#this is just a section key with
 #some comments
 #not really very important stuff, but
 #...ok"
 #}
 
 kdbkey { "${ns}-test/section2/setting1":
-  value  => "asdf",
+  value     => 'asdf',
+  comments  => ''
   #  before => Kdbkey["${ns}-test/section2"]
 }

@@ -1,9 +1,16 @@
+# encoding: UTF-8
+##
+# @file
+#
+# @brief Kdb provider for type kdbkey for managing libelektra keys
+#
+# @copyright BSD License (see LICENSE or http://www.libelektra.org)
+#
+#
 
 module Puppet
   Type.type(:kdbkey).provide :kdb do
     desc "kdb through kdb command"
-
-    puts "kdb provider"
 
     commands :kdb => "kdb"
 
