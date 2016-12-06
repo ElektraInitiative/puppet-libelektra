@@ -12,7 +12,7 @@ module Puppet
   Type.type(:kdbkey).provide :ruby do
     desc "kdb through libelektra Ruby API"
 
-    # static instance var for checking if we are able to use this provider
+    # static class var for checking if we are able to use this provider
     @@have_kdb = true
 
     begin
@@ -34,17 +34,25 @@ module Puppet
       @@db.get @@ks, "/"
     end
 
-    @resource_key = nil
+    # just used during testing to inject a mock
+    def self.use_fake_ks(ks)
+      @@ks = ks
+    end
+
+    # allow access to internal key, used during testing
+    attr_reader :resource_key
 
     def create
       #puts "ruby create #{@resource[:name]}"
       @resource_key = Kdb::Key.new @resource[:name], value: @resource[:value]
+      self.metadata= @resource[:metadata] unless @resource[:metadata].nil?
+      self.comments= @resource[:comments] unless @resource[:comments].nil?
       @@ks << @resource_key
     end
 
     def destroy
       #puts "ruby destroy #{@resource[:name]}"
-      @@ks.delete @resource[:name]
+      @@ks.delete @resource[:name] unless @resource_key.nil?
     end
 
     # is called first for each managed resource

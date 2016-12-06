@@ -26,6 +26,12 @@ Puppet::Type.newtype(:kdbkey) do
       TODO: describe if it is safe or not to use cascading keys?
       EOT
 
+    validate do |name|
+      unless name =~ /^(spec|proc|dir|user|system)?\/.+/
+        raise ArgumentError, "%s is not a valid libelektra key name" % name
+      end
+    end
+
     isnamevar
   end
 
@@ -52,7 +58,7 @@ Puppet::Type.newtype(:kdbkey) do
           }
       }
       EOT
-    
+
     validate do |metadata|
       if !metadata.is_a? Hash
         raise ArgumentError, "Hash required"
