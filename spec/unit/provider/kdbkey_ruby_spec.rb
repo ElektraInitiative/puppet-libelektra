@@ -133,5 +133,7 @@ describe Puppet::Type.type(:kdbkey).provider(:ruby) do
     provider.destroy
   end
 
-  # TODO add much more tests
+  it "should update the value"
+  it "should update the metadata"
+  it "should update the comments"
 end
