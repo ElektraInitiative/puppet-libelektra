@@ -92,7 +92,7 @@ module Puppet
     def metadata=(value)
       # update metadata
       value.each { |k, v|
-        @resource_key.set_meta k, v 
+        @resource_key.set_meta k, v
       } unless @resource_key.nil?
 
       # do we have to purge all unspecified keys?
@@ -108,7 +108,7 @@ module Puppet
       first = true # used for splitting lines
       # search for all meta keys which names starts with 'comments/#'
       # and concat its values line by line
-      @resource_key.meta.each do |e| 
+      @resource_key.meta.each do |e|
         if e.name.start_with? "comments/#"
           comments << "\n" unless first
           comments << e.value.sub(/^# /, '')

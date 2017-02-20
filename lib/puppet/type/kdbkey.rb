@@ -35,6 +35,15 @@ Puppet::Type.newtype(:kdbkey) do
     isnamevar
   end
 
+  # TODO: this would be very handy to set a basepath for multiple keys at once
+  #newparam(:basename) do
+  #  desc <<-EOT
+
+  #  EOT
+
+  #  isnamevar
+  #end
+
   newproperty(:value) do
     desc <<-EOT
       Desired value of the key.

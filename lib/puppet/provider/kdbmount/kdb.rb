@@ -38,14 +38,35 @@ module Puppet
     end
 
     def create
+      #puts "kdb create"
       cmd_args = ["mount"]
+      cmd_args << "-R"
+      cmd_args << @resource[:resolver]
+      cmd_args << "-W" if @resource[:add_recommended_plugins]
       cmd_args << @resource[:file]
       cmd_args << @resource[:name]  # mountpoint
-      cmd_args += @resource[:plugins] unless @resource[:plugins].nil?
+      if @resource[:plugins].is_a? Array
+        @resource[:plugins].each do |e|
+          # build plugin config cmdline argument
+          if e.is_a? Hash
+            config_line = ''
+            e.each do |k,v|
+              config_line << "," unless config_line.empty?
+              config_line << "#{k}=#{v}"
+            end
+            cmd_args << config_line
+          else
+            # plain plugin name
+            cmd_args << e
+          end
+        end
+      end
+      cmd_args.flatten!
       kdb(cmd_args)
     end
 
     def destroy
+      puts "kdb destroy"
       kdb ["umount", @resource[:name]]
     end
 

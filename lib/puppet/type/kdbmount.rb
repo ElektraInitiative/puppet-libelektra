@@ -7,7 +7,8 @@
 # @copyright BSD License (see LICENSE or http://www.libelektra.org)
 #
 #
-#require 'puppet/parameter/boolean'
+require 'puppet/parameter/boolean'
+
 
 Puppet::Type.newtype(:kdbmount) do
   @doc = <<-EOT
@@ -16,11 +17,15 @@ Puppet::Type.newtype(:kdbmount) do
     This resource type allows to define and manipulate libelektra's global key
     database. Libelektra allows to 'mount' external configuration files into
     its key database. A specific libelektra backend plugin is for reading and
-    writing the configuration file. 
+    writing the configuration file.
     ...
     EOT
 
+  RECOMMENDED_PLUGINS = ["sync"]
+
+
   ensurable
+
 
   newparam(:name) do
     desc <<-EOT
@@ -40,57 +45,83 @@ Puppet::Type.newtype(:kdbmount) do
     isnamevar
   end
 
+
   newproperty(:file) do
     desc <<-EOT
-    The configuration file to mount into the libelektra key database.
+    The configuration file to mount into the Elektra key database.
     EOT
     # TODO: do we have any restrictions on this?
   end
 
-  # for now we do not support changing plugins and there settins
-  # so we use a param for this NOW
-  #newproperty(:plugins, :array_matching => :all) do
-  newparam(:plugins) do
+
+  #newproperty(:resolver) do
+  newparam(:resolver) do
     desc <<-EOT
-    A list of libelektra plugins to use for mounting.
-    TODO: finish this
+      The resolver plugin to use for mounting.
+      Default: 'resolver'
     EOT
 
-    munge do |plugins|
-      puts "plugins munge: #{value}"
-      config_args = []
+    defaultto "resolver"
 
-      if plugins.is_a? String
-        config_args << plugins
-
-      elsif plugins.is_a? Array
-        plugins.each do |elem|
-          if elem.is_a? String
-            config_args << elem
-          elsif elem.is_a? Hash
-            # we've got a config hash for the previous plugin
-            config_line = ''
-            elem.each do |plugin_config, value|
-              config_line << ',' unless config_line.empty?
-              config_line << "#{plugin_config}=#{value}"
-              #config_line << plugin_config
-              #config_line << "=#{value}" unless value.empty?
-            end
-            config_args << config_line
-          end
-        end
+    validate do |value|
+      unless /^\w+$/ =~ value
+        raise ArgumentError, "'%s' is not a valid plugin name" % value
       end
-
-      return config_args
     end
   end
+
+
+  newparam(:add_recommended_plugins,
+           :boolean => true,
+           :parent => Puppet::Parameter::Boolean) do
+    desc <<-EOT
+      If set to true, Elektra will add recommended plugins to the mounted
+      backend configuration.
+      Recommended plugins are: #{RECOMMENDED_PLUGINS.join ', '}
+      Default: false
+    EOT
+    defaultto :false
+  end
+
+
+  # for now we do not support changing plugins and there settings
+  # so we use a param for this NOW
+  newproperty(:plugins, :array_matching => :all) do
+  #newparam(:plugins) do
+    desc <<-EOT
+    A list of libelektra plugins with optional configuration settings
+    use for mounting.
+
+    The following value formats are acceped:
+    - a string value describing a single plugin name
+    - an array of string values each defining a single plugin
+    - a hash of plugin names with corresponding configuration settings
+      e.g.
+        [ 'ini' => {
+              'delimiter' => " "
+              'array'     => ''
+              },
+          'type'
+        ]
+
+    EOT
+
+    #munge do |value|
+    #  puts "resolver: is nil" if resource[:resolver].nil?
+    #  value << resource[:resolver]
+    #  value + RECOMMENDED_PLUGINS if resource[:add_recommended_plugins]
+    #end
+
+    # TODO implement this to allow better plugins handling
+    #def insync?
+    #end
+
+  end
+
 
   def exists?
     #puts "type kdbmount exists? #{self[:name]}"
     @provider.get(:ensure) != :absent
   end
 
-
-  def self.plugins_to_config_args(plugins)
-  end
 end
