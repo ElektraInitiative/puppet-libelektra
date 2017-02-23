@@ -24,6 +24,7 @@ module Puppet
 
     def create
       self.value=(@resource[:value])
+      self.metadata= @resource[:metadata] unless @resource[:metadata].nil?
     end
 
     def destroy
@@ -45,6 +46,41 @@ module Puppet
     def value=(value)
       run_kdb ["set", @resource[:name], value]
     end
+
+    def metadata
+      @metadata_values = {}
+      output = run_kdb ["lsmeta", @resource[:name]]
+      output.split.each do |metaname|
+        # foreach meta key, fetch its value
+        gm = run_kdb(["getmeta", @resource[:name], metaname], {
+          :combine    => false,
+          :failonfail => false}
+        )
+        if gm.exitstatus == 0
+          @metadata_values[metaname.strip] = gm.chomp
+        end
+      end
+      return @metadata_values
+    end
+
+    def metadata=(value)
+      value.each do |metaname, metavalue|
+        run_kdb ["setmeta", @resource[:name], metaname, metavalue]
+      end
+      # handle purge_meta_keys
+      if @resource.purge_meta_keys? and @metadata_values.is_a? Hash
+        @metadata_values.each do |m,v|
+          next if value.include? m
+          next if m == "comments" or m.start_with? "comment/", "comments/"
+          next if m.start_with? "internal/"
+          next if m == "order"
+
+          # currently there is no rmmeta command for kdb
+          run_kdb ["setmeta", @resource[:name], m, '']
+        end
+      end
+    end
+
 
   end
 end
