@@ -181,4 +181,11 @@ describe Puppet::Type.type(:kdbkey) do
     end
   end
 
+  context "parameter 'user'" do
+    let(:params) { {:name => "user/test/puppet/x1"} }
+    it "exists and is optional" do
+      expect(described_class.new(params)[:user]).to be_nil
+    end
+  end
+
 end

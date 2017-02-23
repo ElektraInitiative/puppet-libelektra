@@ -17,6 +17,9 @@ Puppet::Type.newtype(:kdbkey) do
     key database.
     EOT
 
+  feature :user, "ability to define/modify keys in the context of a specific user"
+
+
   ensurable
 
   # prefix parameter
@@ -173,6 +176,32 @@ Puppet::Type.newtype(:kdbkey) do
         return "comments changed '#{current_value}' to '#{new_value}'"
       end
     end
+  end
+
+  # param user
+  #
+  # This is currently only supported by Provider 'kdb'.
+  # However, it seams the 'feature' stuff is evaluated only for once for all
+  # instances, so we can not really say, use provider 'kdb' for those with
+  # 'user' set and provider 'ruby' for all other instances. This is not working
+  # or at least for me it was not working. So we do it manually.
+  newparam(:user) do #, :required_features => ["user"]) do
+    desc <<-EOT
+    define/modify key in the context of given user.
+
+    This is only relevant, if key name referes to a user context, thus is
+    either cascading (starting with a '/') or is within the 'user'
+    namespace (starting with 'user/').
+    EOT
+
+    # misuse the validate method, to change the provider, if required
+    validate do |value|
+      if provider.class.name != :kdb
+        Puppet.debug "Puppet::Type::Kdbkey: change provider to 'kdb' (required by param 'user')"
+        @resource.provider= :kdb
+      end
+    end
+
   end
 
 end

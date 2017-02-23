@@ -85,3 +85,12 @@ kdbkey { 'something else':
   value  => 'hello prefix'
 }
 
+
+#
+# set keys in the context of a given user
+#
+kdbkey { 'user/test/puppet/usertest/x1':
+  value    => 'asdf',
+  user     => 'bernhard',
+  #provider => 'kdb'
+}

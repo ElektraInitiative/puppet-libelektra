@@ -12,20 +12,26 @@ module Puppet
   Type.type(:kdbkey).provide :kdb do
     desc "kdb through kdb command"
 
+    has_feature :user
+
     commands :kdb => "kdb"
 
+    def run_kdb(args, params = {:combine => true, :failonfail => true})
+      cmd_line = [command(:kdb)] + args
+      params[:uid] = @resource[:user] unless @resource[:user].nil?
+      execute(cmd_line, params)
+    end
+
     def create
-      #puts "kdb create"
       self.value=(@resource[:value])
     end
 
     def destroy
-      #puts "kdb destroy"
-      kdb ["rm", @resource[:name]]
+      run_kdb ["rm", @resource[:name]]
     end
 
     def exists?
-      #puts "kdb exists? #{self.name}"
+      Puppet.debug "kdbkey/kdb exists? #{@resource[:name]}"
       output = execute([command(:kdb), "get", @resource[:name]],
                                :failonfail => false)
       #puts "output: #{output}, #{output.exitstatus}"
@@ -33,13 +39,11 @@ module Puppet
     end
 
     def value 
-      #puts "getting value"
-      kdb ["sget", "--color=never", @resource[:name], "''"]
+      run_kdb ["sget", "--color=never", @resource[:name], "''"]
     end
 
     def value=(value)
-      #puts "setting value to #{value}"
-      kdb(["set", @resource[:name], value])
+      run_kdb ["set", @resource[:name], value]
     end
 
   end
