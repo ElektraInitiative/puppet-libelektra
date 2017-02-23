@@ -19,6 +19,46 @@ Puppet::Type.newtype(:kdbkey) do
 
   ensurable
 
+  # prefix parameter
+  #
+  # Note: this has to be defined BEFORE the name parameter, since we reference
+  # this prefix parameter within the names 'muge' and 'validate' methods
+  newparam(:prefix) do
+    desc <<-EOT
+    Prefix for the key name (optional)
+
+    If given, this value will prefix the given libelektra key name.
+    e.g.:
+
+      kdbkey { 'puppet/x1':
+        prefix => 'system/test',
+        value  => 'hello'
+      }
+
+    This will manage the key 'system/test/puppet/x1'.
+
+    Prefix and name are joined with a '/', if prefix does not end with '/'
+    or name does not start with '/'.
+
+    Both, name and prefix parameter are used to uniquely identify a
+    libelektra key.
+    EOT
+
+    isnamevar
+
+    defaultto ""
+
+    validate do |name|
+      unless name.nil? or name.empty?
+        unless name =~ /^(\/|spec|proc|dir|user|system)/
+          raise ArgumentError, "'%s' is not a valid basename" % name
+        end
+      end
+    end
+  end
+
+
+  # name parameter
   newparam(:name) do
     desc <<-EOT
       The fully qualified name of the key
@@ -26,23 +66,38 @@ Puppet::Type.newtype(:kdbkey) do
       TODO: describe if it is safe or not to use cascading keys?
       EOT
 
+    # add the prefix, if given
+    munge do |value|
+      if resource[:prefix].nil?
+        value
+      else
+        fullname = resource[:prefix]
+        fullname += "/" unless fullname[-1] == "/" or value[0] == "/"
+        fullname += value
+        fullname.gsub "//", "/"
+      end
+    end
+
+    # if no prefix is given, we have to validate the key name
     validate do |name|
-      unless name =~ /^(spec|proc|dir|user|system)?\/.+/
-        raise ArgumentError, "%s is not a valid libelektra key name" % name
+      if resource[:prefix].nil? or resource[:prefix].empty?
+        unless name =~ /^(spec|proc|dir|user|system)?\/.+/
+          raise ArgumentError, "'%s' is not a valid libelektra key name" % name
+        end
       end
     end
 
     isnamevar
   end
 
-  # TODO: this would be very handy to set a basepath for multiple keys at once
-  #newparam(:basename) do
-  #  desc <<-EOT
+  # this is required, since we've defined to parameter as 'namevar'
+  # it's used to assign the name from the resource title, whereas the default
+  # implementation will raise an error if two name vars are given
+  # (see type.rb for details)
+  def self.title_patterns
+    [ [ /(.*)/m, [ [:name] ] ] ]
+  end
 
-  #  EOT
-
-  #  isnamevar
-  #end
 
   newproperty(:value) do
     desc <<-EOT

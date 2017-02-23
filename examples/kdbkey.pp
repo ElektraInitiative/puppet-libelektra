@@ -60,7 +60,28 @@ m line2'
 
 
 kdbkey { "${ns}-test/section2/setting1":
-  value     => 'asdf',
-  comments  => ''
+  value    => 'asdf',
+  comments => ''
   #  before => Kdbkey["${ns}-test/section2"]
 }
+
+
+#
+# prefix tests
+#
+
+# results in "${ns-test}/prefixtest/s1"
+kdbkey { '/prefixtest/s1':
+  prefix => "${ns}-test",
+  value  => 'hello prefix'
+}
+
+# results in "${ns-test}/prefixtest/s12"
+# will lead to duplicate resource error if it matches the above one (eaven
+# with a different resource title)
+kdbkey { 'something else':
+  name   => '/prefixtest/s12',
+  prefix => "${ns}-test",
+  value  => 'hello prefix'
+}
+
