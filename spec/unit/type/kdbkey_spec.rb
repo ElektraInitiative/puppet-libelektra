@@ -112,6 +112,12 @@ describe Puppet::Type.type(:kdbkey) do
       include_examples "prefix + name", "system/", "test/puppet/x1", "system/test/puppet/x1"
       include_examples "prefix + name", "system", "test/puppet/x1", "system/test/puppet/x1"
     end
+
+    it "updates 'title' to match new 'name'" do
+      expect(described_class.new(:prefix => "user/test",
+                                 :name   => "/puppet/x1").title
+            ).to eq("user/test/puppet/x1")
+    end
   end
 
   context "property 'value'" do

@@ -77,7 +77,8 @@ Puppet::Type.newtype(:kdbkey) do
         fullname = resource[:prefix]
         fullname += "/" unless fullname[-1] == "/" or value[0] == "/"
         fullname += value
-        fullname.gsub "//", "/"
+        fullname.gsub! "//", "/"
+        @resource.title = fullname
       end
     end
 
