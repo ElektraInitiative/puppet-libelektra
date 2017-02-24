@@ -8,25 +8,24 @@
 #
 
 require 'spec_helper'
+require_relative 'key_helper.rb'
+require_relative 'key_ruby_helper.rb'
 require 'kdb'
 
 TEST_NS = 'user/test/puppet-rspec/'
-
-def create_resource(params)
-  Puppet::Type.type(:kdbkey).new(params)
-end
 
 
 
 describe Puppet::Type.type(:kdbkey).provider(:ruby) do
 
-  let(:name)     { "#{TEST_NS}x1" }
-  let(:ks)       { double("ks") }
+  let(:h) { KdbKeyProviderHelper.new }
+  let(:keyname) { "#{TEST_NS}x1" }
+  let(:ks) { Kdb::KeySet.new }
   let(:provider) { described_class.new }
 
   before :example do
     described_class.use_fake_ks ks
-    provider.resource = create_resource :name => name
+    provider.resource = create_resource :name => keyname
   end
 
 
@@ -36,63 +35,49 @@ describe Puppet::Type.type(:kdbkey).provider(:ruby) do
 
   context "should check if resource exists" do
     it "should return false on exists? if resource does not exist'" do
-      allow(ks).to receive(:lookup).and_return nil
-
-      expect(ks).to receive(:lookup) { name }
-      # for some very strange reason the first call inside expect(..) is true
-      provider.exists?
       expect(provider.exists?).to eq(false)
-      expect(provider.resource_key).to be_nil
     end
 
     it "should return true on exists? if resource exists'" do
-      key = Kdb::Key.new name
-      allow(ks).to receive(:lookup).and_return key
-
-      expect(ks).to receive(:lookup) { name }
-      provider.exists?
+      h.ensure_key_exists ks, keyname
       expect(provider.exists?).to eq(true)
-      expect(provider.resource_key).to be(key)
     end
 
   end
 
   context "should create key" do
     before :example do
-      allow(ks).to receive(:<<)
-      expect(ks).to receive(:<<) { provider.resource_key }
+      h.ensure_key_is_missing ks, keyname
     end
 
     it "with defined name" do
       provider.create
-      key = provider.resource_key
-
-      expect(key.name).to eq(name)
+      expect(h.check_key_exists ks, keyname).to eq true
     end
 
     it "with defined name and value" do
       value = "my value"
-      provider.resource = create_resource :name => name, :value => value
+      provider.resource = create_resource :name => keyname, :value => value
 
       provider.create
 
-      expect(provider.resource_key.name).to eq(name)
-      expect(provider.resource_key.value).to eq(value)
+      expect(h.check_key_exists ks, keyname).to eq true
+      expect(h.key_get_value ks, keyname).to eq value
     end
 
     it "with defined name, value and metadata" do
       value = "my value"
       meta = {'meta1' => 'v1', 'meta2' => 'v2' }
-      provider.resource = create_resource :name     => name, 
+      provider.resource = create_resource :name     => keyname,
                                           :value    => value,
                                           :metadata => meta
 
       provider.create
 
-      expect(provider.resource_key.name).to eq(name)
-      expect(provider.resource_key.value).to eq(value)
+      expect(h.check_key_exists ks, keyname).to eq true
+      expect(h.key_get_value ks, keyname).to eq value
       meta.each do |k, v|
-        expect(provider.resource_key.get_meta k).to eq(v)
+        expect(h.key_get_meta ks, keyname, k).to eq v
       end
     end
 
@@ -101,39 +86,233 @@ describe Puppet::Type.type(:kdbkey).provider(:ruby) do
       meta = {'meta1' => 'v1', 'meta2' => 'v2' }
       comments = "my comment"
 
-      provider.resource = create_resource :name     => name, 
+      provider.resource = create_resource :name     => keyname,
                                           :value    => value,
                                           :metadata => meta,
                                           :comments => comments
 
       provider.create
 
-      expect(provider.resource_key.name).to eq(name)
-      expect(provider.resource_key.value).to eq(value)
+      expect(h.check_key_exists ks, keyname).to eq true
+      expect(h.key_get_value ks, keyname).to eq value
       meta.each do |k, v|
-        expect(provider.resource_key.get_meta k).to eq(v)
+        expect(h.key_get_meta ks, keyname, k).to eq(v)
       end
-      expect(provider.resource_key['comments']).to eq("#0")
-      expect(provider.resource_key['comments/#0']).to eq("# #{comments}")
+      expect(h.key_get_comment ks, keyname).to eq comments
     end
 
 
   end
 
-  it "should do nothing on destroy when resource_key is nil" do
+  it "should remove key on destroy" do
+    h.ensure_key_exists ks, keyname
+    # we have to call exists? first
+    provider.exists?
     provider.destroy
+
+    expect(h.check_key_exists ks, keyname).to eq false
   end
 
-  it "should remove key when we have a key" do
-    # first create the key, a delete on nil-key does not make sense
-    allow(ks).to receive(:<<)
-    provider.create
+  context "with existing key" do
+    before :example do
+      h.ensure_key_exists ks, keyname, "test"
+      provider.exists?
+    end
 
-    expect(ks).to receive(:delete) { nil }
-    provider.destroy
+    context "should update the key value" do
+      it "to an arbitrary string" do
+        expect(h.key_get_value ks, keyname).to eq "test"
+        provider.value= "some string value"
+        expect(h.key_get_value ks, keyname).to eq "some string value"
+      end
+
+      it "to an empty string" do
+        expect(h.key_get_value ks, keyname).to eq "test"
+        provider.value= ""
+        expect(h.key_get_value ks, keyname).to eq ""
+      end
+    end
+
+    context "and existing metadata" do
+      let(:metadata) { {"m1" => "v1", "m2" => "v2"} }
+      before :example do
+        h.ensure_meta_exists ks, keyname, "m1", metadata["m1"]
+        h.ensure_meta_exists ks, keyname, "m2", metadata["m2"]
+        provider.resource[:metadata]= metadata
+      end
+
+      context "should get metadata values" do
+        it "as a hash" do
+          got_meta = provider.metadata
+
+          expect(got_meta).to be_a_kind_of Hash
+          expect(got_meta["m1"]).to eq "v1"
+          expect(got_meta["m2"]).to eq "v2"
+        end
+      end
+
+      context "should update the metadata" do
+        it "with missing metadata key" do
+          metadata["m3"] = "v3"
+          provider.resource[:metadata]= metadata
+          provider.metadata= metadata
+
+          got_meta = provider.metadata
+
+          expect(got_meta.include? "m3").to eq true
+          expect(got_meta["m3"]).to eq "v3"
+        end
+
+        it "with existing metadata" do
+          got_meta = provider.metadata
+
+          expect(got_meta.include? "m1").to eq true
+          expect(got_meta.include? "m2").to eq true
+          expect(got_meta["m1"]).to eq "v1"
+          expect(got_meta["m2"]).to eq "v2"
+        end
+      end
+
+      context "should purge not specified metadata if 'purge_meta_keys' is set" do
+        before :example do
+          h.ensure_meta_exists ks, keyname, "r1", "to remove"
+          h.ensure_meta_exists ks, keyname, "r2", "to remove"
+          provider.resource[:purge_meta_keys] = true
+        end
+
+        def has_expected_but_not_specified(got_meta)
+          expect(got_meta.include? "m1").to eq true
+          expect(got_meta.include? "m2").to eq true
+          expect(got_meta.include? "r1").to eq false
+          expect(got_meta.include? "r2").to eq false
+
+          expect(got_meta["m1"]).to eq "v1"
+          expect(got_meta["m2"]).to eq "v2"
+        end
+
+        it "while updating specified" do
+          h.ensure_meta_exists ks, keyname, "m1", "old value"
+          provider.metadata= metadata
+
+          got_meta = provider.metadata
+
+          has_expected_but_not_specified got_meta
+        end
+
+        it "while ignoring comments, which are not modified" do
+          h.ensure_comment_exists ks, keyname, "some comment"
+
+          provider.metadata= metadata
+          got_meta = provider.metadata
+
+          has_expected_but_not_specified got_meta
+          expect(h.check_comment_exists ks, keyname).to eq true
+          expect(h.key_get_comment ks, keyname).to eq "some comment"
+        end
+
+        it "while ignoring comments, which are added too (before)" do
+          provider.comments= "some comment"
+          provider.metadata= metadata
+
+          got_meta = provider.metadata
+
+          has_expected_but_not_specified got_meta
+          expect(h.check_comment_exists ks, keyname).to eq true
+          expect(h.key_get_comment ks, keyname).to eq "some comment"
+        end
+
+        it "while ignoring comments, which are added too (after)" do
+          provider.metadata= metadata
+          provider.comments= "some comment"
+
+          got_meta = provider.metadata
+
+          has_expected_but_not_specified got_meta
+          expect(h.check_comment_exists ks, keyname).to eq true
+          expect(h.key_get_comment ks, keyname).to eq "some comment"
+        end
+
+        it "while ignoring 'internal/' metadata keys" do
+          h.ensure_meta_exists ks, keyname, "internal/test1", "to keep"
+
+          provider.metadata= metadata
+          got_meta = provider.metadata
+
+          has_expected_but_not_specified got_meta
+          expect(h.check_meta_exists ks, keyname, "internal/test1").to eq true
+          expect(h.key_get_meta ks, keyname, "internal/test1").to eq "to keep"
+        end
+
+        it "while ignoring 'order' metadata" do
+          h.ensure_meta_exists ks, keyname, "order", "5"
+
+          provider.metadata= metadata
+          got_meta = provider.metadata
+
+          has_expected_but_not_specified got_meta
+          expect(h.check_meta_exists ks, keyname, "order").to eq true
+          expect(h.key_get_meta ks, keyname, "order").to eq "5"
+        end
+      end
+    end
+
+    context "should handle comments" do
+      it "and fetch the comment string" do
+        h.ensure_comment_exists ks, keyname, "my comment"
+
+        expect(provider.comments).to eq "my comment"
+      end
+
+      it "and fetch a multiline comment string at once" do
+        expected_comment = <<EOT
+this  
+is
+a
+multiline
+comment
+EOT
+        expected_comment.chomp!
+
+        h.ensure_comment_exists ks, keyname, expected_comment
+
+        expect(provider.comments).to eq expected_comment
+      end
+
+      it "and create a new comment" do
+        provider.comments= " my comment line  "
+        expect(h.check_comment_exists ks, keyname).to eq true
+        expect(h.key_get_comment ks, keyname).to eq " my comment line  "
+      end
+
+      it "and update a multi line comment" do
+        expected_comment = <<EOT
+yet another
+mulitline
+comment
+EOT
+        expected_comment.chomp!
+
+        h.ensure_comment_exists ks, keyname, "a single line comment"
+
+        provider.comments= expected_comment
+
+        expect(h.key_get_comment ks, keyname).to eq expected_comment
+      end
+
+      it "and update from a multi line comment to a single line comment" do
+        h.ensure_comment_exists ks, keyname, <<EOT
+a
+simple
+multiline
+
+comment
+EOT
+
+        provider.comments= "a single line comment "
+
+        expect(h.key_get_comment ks, keyname).to eq "a single line comment "
+      end
+    end
   end
 
-  it "should update the value"
-  it "should update the metadata"
-  it "should update the comments"
 end

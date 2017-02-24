@@ -98,6 +98,10 @@ module Puppet
       # do we have to purge all unspecified keys?
       if @resource.purge_meta_keys?
         @resource_key.meta.each do |metakey|
+          next if metakey.name == "order"
+          next if metakey.name.start_with? "internal/"
+          next if /^comments?\// =~ metakey.name
+          next if metakey.name == "comments"
           @resource_key.del_meta metakey.name unless value.include? metakey.name
         end
       end
@@ -130,7 +134,7 @@ module Puppet
 
       # update all comment lines
       comment_lines.each_with_index do |line, index|
-        @resource_key.set_meta "comments/##{index}", "# #{line}"
+        @resource_key.set_meta "comments/##{index}", "##{line}"
       end
 
       # iterate over all meta keys and remove all comment keys which
