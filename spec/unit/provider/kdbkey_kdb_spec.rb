@@ -68,6 +68,10 @@ def ensure_comment_exists(keyname, comment = "test")
       key = Kdb::Key.new keyname
       ks << key
     end
+    # delete old comment first
+    key.meta.each do |e|
+      key.del_meta e if e.name.start_with? COMMENT
+    end
     lines = comment.split "\n"
     key[COMMENT] = "##{lines.size}"
     lines.each_with_index do |line, index|
@@ -86,7 +90,7 @@ end
 
 def ensure_meta_is_missing(keyname, meta)
   do_on_kdb_with_key keyname do |key|
-    key.del_meta meta unless key.nil? 
+    key.del_meta meta unless key.nil?
   end
 end
 
@@ -147,16 +151,16 @@ def key_get_comment(keyname)
       key.meta.find_all do |e|
         e.name.start_with? COMMENT+"/#"
       end.each do |c|
-        comment = "" if comment.nil?
+        comment = [] if comment.nil?
         if c.value.start_with? "#"
-          comment += c.value[1..-1]
+          comment << c.value[1..-1]
         else
-          comment += c.value
+          comment << c.value
         end
       end
     end
   end
-  return comment
+  return comment.join "\n"
 end
 
 
@@ -203,7 +207,7 @@ describe Puppet::Type.type(:kdbkey).provider(:kdb) do
 
     it "with defined name and value" do
       expect(check_key_exists keyname).to eq(false)
-      provider.resource = create_resource(:name => keyname, 
+      provider.resource = create_resource(:name => keyname,
                                           :value => "create with value")
       provider.create
       expect(check_key_exists keyname).to eq(true)
@@ -383,6 +387,61 @@ describe Puppet::Type.type(:kdbkey).provider(:kdb) do
       expect(key_get_meta keyname, "order").to eq "5"
       #expect(check_meta_exists keyname, "r1").to eq false
       expect(key_get_meta keyname, "r1").to eq ""
+    end
+  end
+
+  context "should handle comments" do
+    it "and fetch the comment string" do
+      ensure_comment_exists keyname, "some comments"
+
+      comments = provider.comments
+
+      expect(comments).to be_a_kind_of String
+      expect(comments).to eq "some comments"
+    end
+
+    it "and fetch a multiline the comment string at once" do
+      expected_comment = <<EOT
+ this is a multi
+ line
+ comment
+EOT
+      expected_comment.chomp!
+
+      ensure_comment_exists keyname, expected_comment
+
+      comments = provider.comments
+
+      expect(comments).to eq expected_comment
+    end
+
+    it "and create a new comment" do
+      ensure_comment_is_missing keyname
+
+      provider.comments= "a new comment"
+
+      expect(check_comment_exists keyname).to eq true
+
+      # for now, as we cannot remove metakeys, we have to live with
+      # empty comment lines
+      actual_comment = key_get_comment(keyname).gsub(/\n*$/, '')
+
+      expect(actual_comment).to eq "a new comment"
+    end
+
+    it "and update a multi line comment" do
+      ensure_comment_exists keyname
+
+      expected_comment = <<EOT
+ this is a multi line 
+ comment
+EOT
+      expected_comment.chomp!
+
+      provider.comments= expected_comment
+
+      actual_comment = key_get_comment(keyname).gsub(/\n*$/, '')
+      expect(actual_comment).to eq expected_comment
     end
 
   end

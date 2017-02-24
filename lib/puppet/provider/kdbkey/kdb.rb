@@ -81,6 +81,40 @@ module Puppet
       end
     end
 
+    def comments
+      metadata unless @metadata_values.is_a? Hash
+      comments = ""
+      @metadata_values.each do |meta, value|
+        if /^comments?\/#/ =~ meta
+          comments << "\n" unless comments.empty?
+          comments << value.sub(/^#/, '')
+        end
+      end
+      return comments
+    end
+
+    def comments=(value)
+      metadata unless @metadata_values.is_a? Hash
+      comment_lines = value.split "\n"
+
+      updated = []
+      comment_lines.each_with_index do |line, index|
+        updated << meta_name = "comments/##{index}"
+        run_kdb ["setmeta", @resource[:name], meta_name, line]
+      end
+
+      @metadata_values.each do |k, v|
+        # update comments count value
+        if k == "comments"
+          run_kdb ["setmeta", @resource[:name], k, "##{comment_lines.size}"]
+        end
+
+        if k.start_with? "comments/#" and !updated.include? k
+          run_kdb ["setmeta", @resource[:name], k, '']
+        end
+      end
+    end
+
 
   end
 end
