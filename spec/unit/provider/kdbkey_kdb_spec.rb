@@ -13,15 +13,11 @@ require_relative 'key_kdb_helper.rb'
 require 'kdb'
 
 
-TEST_NS = 'user/test/puppet-rspec/'
-
-
-
 describe Puppet::Type.type(:kdbkey).provider(:kdb) do
 
-  let(:h) { KdbKeyProviderHelperKDB.new }
+  let(:h) { KdbKeyProviderHelperKDB.new 'user/test/puppet-rspec/' }
   let(:provider) { described_class.new }
-  let(:keyname) { "#{TEST_NS}x1" }
+  let(:keyname) { "#{h.test_prefix}x1" }
   before :example do
     provider.resource = create_resource :name => keyname
   end

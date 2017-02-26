@@ -11,6 +11,12 @@
 # helper methods for testing the kdbkey providers
 
 class KdbKeyProviderHelper
+  attr :test_prefix
+
+  def initialize(_test_prefix)
+    @test_prefix = _test_prefix
+  end
+
   def ensure_key_exists(ks, keyname, value = "test")
     key = ks.lookup keyname
     if key.nil?

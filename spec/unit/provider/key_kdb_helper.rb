@@ -26,15 +26,18 @@ class KdbKeyProviderHelperKDB < KdbKeyProviderHelper
   alias ks_key_get_meta key_get_meta
   alias ks_key_get_comment key_get_comment
 
+  def initialize(test_prefix)
+    super test_prefix
+  end
 
   def do_on_kdb
     raise ArgumentError, "block required" unless block_given?
 
     Kdb.open do |kdb|
       ks = Kdb::KeySet.new
-      kdb.get ks, TEST_NS
+      kdb.get ks, @test_prefix
       result = yield ks
-      kdb.set ks, TEST_NS
+      kdb.set ks, @test_prefix
       return result
     end
   end
