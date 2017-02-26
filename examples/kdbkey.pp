@@ -35,13 +35,15 @@ kdbkey { "${ns}/x4":
     'meta1' => 'm1 value',
     'meta2' => 'm2 value',
     #'meta3' => 'm3 value'
-  }
+  },
+  comments        => 'hello world'
 }
 
 kdbkey { "${ns}-test/section1/setting1":
-  ensure   => present,
-  value    => 'hello ini world ...',
-  metadata => {
+  ensure          => present,
+  value           => 'hello ini world ...',
+  metadata        => {
+    'comments'    => '#1',
     'comments/#0' => '# this is the first comment line',
     'comments/#1' => '# this is the second comment line'
   }
@@ -90,7 +92,7 @@ kdbkey { 'something else':
 # set keys in the context of a given user
 #
 kdbkey { 'user/test/puppet/usertest/x1':
-  value    => 'asdf',
-  user     => 'bernhard',
+  value => 'asdf',
+  user  => 'bernhard',
   #provider => 'kdb'
 }

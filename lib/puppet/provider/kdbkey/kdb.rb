@@ -9,7 +9,7 @@
 #
 
 module Puppet
-  Type.type(:kdbkey).provide :kdb do
+  Type.type(:kdbkey).provide :kdb, :parent => Puppet::Provider::KdbKeyCommon do
     desc "kdb through kdb command"
 
     has_feature :user
@@ -51,6 +51,14 @@ module Puppet
       @metadata_values = {}
       output = run_kdb ["lsmeta", @resource[:name]]
       output.split.each do |metaname|
+        # skip internal keys
+        next if skip_this_metakey? metaname, true
+        # skip this metakey, if purge meta keys is NOT set and this
+        # key is not specified by the user
+        unless @resource.purge_meta_keys? or @resource[:metadata].nil?
+          next unless @resource[:metadata].include? metaname
+        end
+
         # foreach meta key, fetch its value
         gm = run_kdb(["getmeta", @resource[:name], metaname], {
           :combine    => false,

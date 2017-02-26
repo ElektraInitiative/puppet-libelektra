@@ -146,6 +146,62 @@ describe Puppet::Type.type(:kdbkey).provider(:ruby) do
           expect(got_meta["m1"]).to eq "v1"
           expect(got_meta["m2"]).to eq "v2"
         end
+
+        # otherwise, Puppet will think we have to update something and
+        # triggers an update for metadata.
+        it "but not include unspecified keys if 'purge_meta_keys' is not set" do
+          h.ensure_meta_exists ks, keyname, "m3", "xxx"
+
+          got_meta = provider.metadata
+
+          expect(got_meta.include? "m1").to eq true
+          expect(got_meta.include? "m2").to eq true
+          expect(got_meta.include? "m3").to eq false
+        end
+
+        it "and ignore 'internal' metakeys" do
+          h.ensure_meta_exists ks, keyname, "internal/ini/order", "5"
+          h.ensure_meta_exists ks, keyname, "internal/ini/parent", "xxx"
+
+          got_meta = provider.metadata
+
+          expect(got_meta.include? "internal/ini/order").to eq false
+          expect(got_meta.include? "internal/ini/parent").to eq false
+        end
+
+        it "and ignore 'internal' metakeys with 'purge_meta_keys' set" do
+          h.ensure_meta_exists ks, keyname, "internal/ini/order", "5"
+          h.ensure_meta_exists ks, keyname, "internal/ini/parent", "xxx"
+          h.ensure_meta_exists ks, keyname, "comment/#0", "xxx"
+          h.ensure_meta_exists ks, keyname, "comments/#0", "xxx"
+          h.ensure_meta_exists ks, keyname, "comments", "#1"
+          h.ensure_meta_exists ks, keyname, "order", "5"
+
+          provider.resource[:purge_meta_keys] = true
+          got_meta = provider.metadata
+
+          expect(got_meta.include? "internal/ini/order").to eq false
+          expect(got_meta.include? "internal/ini/parent").to eq false
+          expect(got_meta.include? "comment/#0").to eq false
+          expect(got_meta.include? "comments/#0").to eq false
+          expect(got_meta.include? "comments").to eq false
+          expect(got_meta.include? "order").to eq false
+        end
+
+        it "and ignore 'special' metakeys with 'purge_meta_key' unless specified" do
+          h.ensure_meta_exists ks, keyname, "comments/#0", "xxx"
+          h.ensure_meta_exists ks, keyname, "comments", "#1"
+
+          metadata["comments/#0"] = "xxx"
+          metadata["comments"] = "#1"
+          provider.resource[:metadata] = metadata
+          provider.resource[:purge_meta_keys] = true
+
+          got_meta = provider.metadata
+
+          expect(got_meta.include? "comments/#0").to eq true
+          expect(got_meta.include? "comments").to eq true
+        end
       end
 
       context "should update the metadata" do

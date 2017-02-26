@@ -105,16 +105,74 @@ describe Puppet::Type.type(:kdbkey).provider(:kdb) do
   end
 
   context "should get metadata values" do
+    let(:metadata) { {"m1" => "v1", "m2" => "v2"} }
     before :example do
-      h.ensure_meta_exists keyname, "m1", "test"
-      h.ensure_meta_exists keyname, "m2", "test"
+      h.ensure_meta_exists keyname, "m1", metadata["m1"]
+      h.ensure_meta_exists keyname, "m2", metadata["m2"]
+      provider.resource[:metadata]= metadata
     end
 
     it "as a hash" do
       values = provider.metadata
       expect(values).to be_a_kind_of Hash
-      expect(values["m1"]).to eq "test"
-      expect(values["m2"]).to eq "test"
+      expect(values["m1"]).to eq metadata["m1"]
+      expect(values["m2"]).to eq metadata["m2"]
+    end
+
+    # otherwise, Puppet will think we have to update something and
+    # triggers an update for metadata.
+    it "but not include unspecified keys if 'purge_meta_keys' is not set" do
+      h.ensure_meta_exists keyname, "m3", "xxx"
+
+      got_meta = provider.metadata
+
+      expect(got_meta.include? "m1").to eq true
+      expect(got_meta.include? "m2").to eq true
+      expect(got_meta.include? "m3").to eq false
+    end
+
+    it "and ignore 'internal' metakeys" do
+      h.ensure_meta_exists keyname, "internal/ini/order", "5"
+      h.ensure_meta_exists keyname, "internal/ini/parent", "xxx"
+
+      got_meta = provider.metadata
+
+      expect(got_meta.include? "internal/ini/order").to eq false
+      expect(got_meta.include? "internal/ini/parent").to eq false
+    end
+
+    it "and ignore 'internal' metakeys with 'purge_meta_keys' set" do
+      h.ensure_meta_exists keyname, "internal/ini/order", "5"
+      h.ensure_meta_exists keyname, "internal/ini/parent", "xxx"
+      h.ensure_meta_exists keyname, "comment/#0", "xxx"
+      h.ensure_meta_exists keyname, "comments/#0", "xxx"
+      h.ensure_meta_exists keyname, "comments", "#1"
+      h.ensure_meta_exists keyname, "order", "5"
+
+      provider.resource[:purge_meta_keys] = true
+      got_meta = provider.metadata
+
+      expect(got_meta.include? "internal/ini/order").to eq false
+      expect(got_meta.include? "internal/ini/parent").to eq false
+      expect(got_meta.include? "comment/#0").to eq false
+      expect(got_meta.include? "comments/#0").to eq false
+      expect(got_meta.include? "comments").to eq false
+      expect(got_meta.include? "order").to eq false
+    end
+
+    # but if user specifies a special metakey, let user win
+    it "and ignore 'special' metakeys with 'purge_meta_key' unless specified" do
+      h.ensure_comment_exists keyname, "xxx"
+
+      metadata["comments"] = "#1"
+      metadata["comments/#0"] = "xxx"
+      provider.resource[:metadata] = metadata
+      provider.resource[:purge_meta_keys] = true
+
+      got_meta = provider.metadata
+
+      expect(got_meta.include? "comments/#0").to eq true
+      expect(got_meta.include? "comments").to eq true
     end
   end
 

@@ -9,7 +9,7 @@
 #
 
 module Puppet
-  Type.type(:kdbkey).provide :ruby do
+  Type.type(:kdbkey).provide :ruby, :parent => Puppet::Provider::KdbKeyCommon do
     desc "kdb through libelektra Ruby API"
 
     # static class var for checking if we are able to use this provider
@@ -77,14 +77,18 @@ module Puppet
     def metadata
       #key.meta.to_h unless key.nil? ruby 1.9 does not have Enumerable.to_h :(
       res = Hash.new
-      @resource_key.meta.each {
-        |e| res[e.name] = e.value
-      } unless @resource_key.nil?
+      @resource_key.meta.each do |e|
+        next if skip_this_metakey? e.name, true
 
-      # if purge_meta_keys is NOT set to true, remove all unspecified keys
-      if ! @resource.purge_meta_keys?
-        res.keep_if { |k,v| @resource[:metadata].include? k }
-      end
+        # if purge_meta_keys is NOT set to true, remove all unspecified keys
+        # otherwise, Puppet will think we have to change something, so just
+        # keep those, which might have to be changed
+        unless @resource.purge_meta_keys? or @resource[:metadata].nil?
+          next unless @resource[:metadata].include? e.name
+        end
+
+        res[e.name] = e.value
+      end unless @resource_key.nil?
 
       return res
     end
@@ -98,10 +102,8 @@ module Puppet
       # do we have to purge all unspecified keys?
       if @resource.purge_meta_keys?
         @resource_key.meta.each do |metakey|
-          next if metakey.name == "order"
-          next if metakey.name.start_with? "internal/"
-          next if /^comments?\// =~ metakey.name
-          next if metakey.name == "comments"
+          next if skip_this_metakey? metakey.name
+
           @resource_key.del_meta metakey.name unless value.include? metakey.name
         end
       end
@@ -115,7 +117,7 @@ module Puppet
       @resource_key.meta.each do |e|
         if e.name.start_with? "comments/#"
           comments << "\n" unless first
-          comments << e.value.sub(/^# /, '')
+          comments << e.value.sub(/^# ?/, '')
           first = false
         end
       end
