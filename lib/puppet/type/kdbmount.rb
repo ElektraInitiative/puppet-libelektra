@@ -64,7 +64,7 @@ Puppet::Type.newtype(:kdbmount) do
     defaultto "resolver"
 
     validate do |value|
-      unless /^\w+$/ =~ value
+      unless @resource.class.plugin_name_is_valid? value
         raise ArgumentError, "'%s' is not a valid plugin name" % value
       end
     end
@@ -106,14 +106,23 @@ Puppet::Type.newtype(:kdbmount) do
 
     EOT
 
-    #munge do |value|
-    #  puts "resolver: is nil" if resource[:resolver].nil?
-    #  value << resource[:resolver]
-    #  value + RECOMMENDED_PLUGINS if resource[:add_recommended_plugins]
+    validate do |value|
+      if value.is_a? String
+        unless @resource.class.plugin_name_is_valid? value
+          raise ArgumentError, "'%s' is not a vlid plugin name" % value
+        end
+      end
+    end
+    # this can't be done here, since we get each value at once for
+    # munge, thus one munge call for each array entry.
+    #munge do |plugins|
+    #  # convert plugins array to a hash
     #end
 
     # TODO implement this to allow better plugins handling
-    #def insync?
+    #def insync?(value)
+    #  puts "insync? #{value}"
+    #  false
     #end
 
   end
@@ -122,6 +131,10 @@ Puppet::Type.newtype(:kdbmount) do
   def exists?
     #puts "type kdbmount exists? #{self[:name]}"
     @provider.get(:ensure) != :absent
+  end
+
+  def self.plugin_name_is_valid?(name)
+    /^\w+$/ =~ name
   end
 
 end

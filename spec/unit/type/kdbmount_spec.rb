@@ -72,39 +72,43 @@ describe Puppet::Type.type(:kdbmount) do
 
   context "property 'plugins'" do
     let(:params) { {
-      :name    => "user/test/puppet",
-      :plugins => { 'plugin1' => 'sync' }
+      :name    => "user/test/puppet"
       }
     }
-    it "exists" do
-      expect(described_class.new(params)[:plugins]).to eq(["sync"])
-    end
-
-    let(:params) { {
-      :name => "user/test/puppet"
-      }
-    }
-    it "is optional" do
+    it "exists and is optionsl" do
       expect(described_class.new(params)[:plugins]).to be_nil
     end
-    #it "only accepts hash values" do
-    #  p1 = params
 
-    #  p1[:metadata] = ""
-    #  expect { described_class.new(p1) }.to raise_error(Puppet::ResourceError)
+    it "accepts a string" do
+      params[:plugins] = "ini"
+      expect(described_class.new(params)[:plugins]).to eq ["ini"]
+    end
 
-    #  p1[:metadata] = "not a hash"
-    #  expect { described_class.new(p1) }.to raise_error(Puppet::ResourceError)
+    it "accepts an array of strings" do
+      params[:plugins] = ["ini", "type"]
+      expect(described_class.new(params)[:plugins]).to eq ["ini", "type"]
+    end
 
-    #  p1[:metadata] = 1
-    #  expect { described_class.new(p1) }.to raise_error(Puppet::ResourceError)
+    it "accepts a plugin name with corresponding configuration settings" do
+      params[:plugins] = ["ini", {"seperator" => " ", "array" => ""}]
+      expect(described_class.new(params)[:plugins]).to eq params[:plugins]
+    end
 
-    #  p1[:metadata] = {
-    #    'meta1' => 'value 1',
-    #    'meta2' => 'value 2'
-    #  }
-    #  expect(described_class.new(p1)[:metadata]).to eq(p1[:metadata])
-    #end
+    RSpec.shared_examples "invalid plugin names" do |plugins|
+      it "rejects invalid plugin names '#{plugins}'" do
+        expect { 
+          described_class.new(:name => params[:name], :plugins => plugins)
+        }.to raise_error(Puppet::ResourceError)
+      end
+    end
+
+    context "rejects invalid plugin names" do
+      include_examples "invalid plugin names", "invalid plugin"
+      include_examples "invalid plugin names", " ini"
+      include_examples "invalid plugin names", [" ini"]
+      include_examples "invalid plugin names", ["ini", "type "]
+      include_examples "invalid plugin names", ["ini", "type", "$doesnotexist%"]
+    end
   end
 
 end

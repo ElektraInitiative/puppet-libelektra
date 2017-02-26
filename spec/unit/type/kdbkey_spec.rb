@@ -19,7 +19,7 @@ describe Puppet::Type.type(:kdbkey) do
       expect { described_class.new() }.to raise_error(ArgumentError)
     end
 
-    RSpec.shared_examples "valid key names" do |name|
+    RSpec.shared_examples "kdbkey valid key names" do |name|
       it "accepts the key name '#{name}'" do
         expect(described_class.new(:name => name)[:name]).to eq(name)
       end
@@ -27,16 +27,16 @@ describe Puppet::Type.type(:kdbkey) do
 
     context "accepts valid libelektra key names" do
       # cascading key name
-      include_examples "valid key names", "/test/puppet"
+      include_examples "kdbkey valid key names", "/test/puppet"
       # absolute, by namespace key names
-      include_examples "valid key names", "spec/test/puppet"
-      include_examples "valid key names", "proc/test/puppet"
-      include_examples "valid key names", "dir/test/puppet"
-      include_examples "valid key names", "user/test/puppet"
-      include_examples "valid key names", "system/test/puppet"
+      include_examples "kdbkey valid key names", "spec/test/puppet"
+      include_examples "kdbkey valid key names", "proc/test/puppet"
+      include_examples "kdbkey valid key names", "dir/test/puppet"
+      include_examples "kdbkey valid key names", "user/test/puppet"
+      include_examples "kdbkey valid key names", "system/test/puppet"
     end
 
-    RSpec.shared_examples "invalid key names" do |name|
+    RSpec.shared_examples "kdbkey invalid key names" do |name|
       it "rejects the invalid key name '#{name}'" do
         expect {
           described_class.new(:name => name)
@@ -45,10 +45,10 @@ describe Puppet::Type.type(:kdbkey) do
     end
 
     context "rejects invalid libelektra key names" do
-      include_examples "invalid key names", ""
-      include_examples "invalid key names", "hello/world"
-      include_examples "invalid key names", "invalid-name-space"
-      include_examples "invalid key names", "test/xy"
+      include_examples "kdbkey invalid key names", ""
+      include_examples "kdbkey invalid key names", "hello/world"
+      include_examples "kdbkey invalid key names", "invalid-name-space"
+      include_examples "kdbkey invalid key names", "test/xy"
     end
   end
 
@@ -62,7 +62,7 @@ describe Puppet::Type.type(:kdbkey) do
       expect(described_class.new(:name => name)[:prefix]).to eq("")
     end
 
-    RSpec.shared_examples "valid key prefix" do |prefix|
+    RSpec.shared_examples "kdbkey valid key prefix" do |prefix|
       it "accepts the key prefix '#{prefix}'" do
         expect(described_class.new(:name => "/test",
                                    :prefix => prefix)[:prefix]
@@ -72,18 +72,18 @@ describe Puppet::Type.type(:kdbkey) do
 
     context "accepts valid libelektra key name prefix" do
       # cascading key name
-      include_examples "valid key prefix", "/test/puppet"
+      include_examples "kdbkey valid key prefix", "/test/puppet"
       # absolute, by namespace key names
-      include_examples "valid key prefix", "spec/test/puppet"
-      include_examples "valid key prefix", "proc/test/puppet"
-      include_examples "valid key prefix", "dir/test/puppet"
-      include_examples "valid key prefix", "user/test/puppet"
-      include_examples "valid key prefix", "system/test/puppet"
+      include_examples "kdbkey valid key prefix", "spec/test/puppet"
+      include_examples "kdbkey valid key prefix", "proc/test/puppet"
+      include_examples "kdbkey valid key prefix", "dir/test/puppet"
+      include_examples "kdbkey valid key prefix", "user/test/puppet"
+      include_examples "kdbkey valid key prefix", "system/test/puppet"
       # without trailing /
-      include_examples "valid key prefix", "system"
+      include_examples "kdbkey valid key prefix", "system"
     end
 
-    RSpec.shared_examples "invalid key prefix" do |prefix|
+    RSpec.shared_examples "kdbkey invalid key prefix" do |prefix|
       it "rejects the invalid key prefix '#{prefix}'" do
         expect {
           described_class.new(:name    => "/test",
@@ -93,9 +93,9 @@ describe Puppet::Type.type(:kdbkey) do
     end
 
     context "rejects invalid libelektra key names" do
-      include_examples "invalid key prefix", "hello/world"
-      include_examples "invalid key prefix", "invalid-name-space"
-      include_examples "invalid key prefix", "test/xy"
+      include_examples "kdbkey invalid key prefix", "hello/world"
+      include_examples "kdbkey invalid key prefix", "invalid-name-space"
+      include_examples "kdbkey invalid key prefix", "test/xy"
     end
 
     RSpec.shared_examples "prefix + name" do |prefix, name, expected|

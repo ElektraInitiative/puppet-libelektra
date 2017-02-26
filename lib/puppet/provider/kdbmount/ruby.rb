@@ -185,6 +185,7 @@ module Puppet
           end
         end
       end
+      # convert the Hash to an array Puppet gives us
       plugins = plugins.to_a.flatten.reject {|e| e.empty? }
       #puts "#{plugins}"
       plugins
@@ -194,6 +195,11 @@ module Puppet
     # convert the Puppet given :plugins value to a more suitable
     # hash:
     #   pluginname => plugin config settings
+    #
+    # Puppet will give us an array of values, combining plugin names and
+    # config settings. e.g.
+    # ["ini", {"delimiter" => " ", "setting2" => "aa"}, "type"]
+    #
     # e.g:
     #   ini => {
     #     delimiter => " "
@@ -228,7 +234,7 @@ module Puppet
         mountconf = Kdb::KeySet.new
         kdb.get mountconf, path
 
-       yield mountconf
+        yield mountconf
 
         # write new mount config
         kdb.set mountconf, path
