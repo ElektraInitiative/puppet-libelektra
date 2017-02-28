@@ -318,4 +318,54 @@ Puppet::Type.newtype(:kdbkey) do
 
   end
 
+   autorequire(:kdbmount) do
+    if self[:name].is_a? String
+
+      # split name into path elements, so token separated by '/' not including 
+      # escaped '/' occurrences
+      # Thus, when we detect a '\\' at the end of a token, we do not want
+      # to split this up
+      names = self[:name].split '/'
+      remember = nil
+      names.collect! do |token|
+        next unless token.is_a? String
+        next if token.empty?
+        if token[-1] == '\\'
+          remember ||= ""
+          remember << "/" unless remember.empty?
+          remember << token
+          next
+        elsif !remember.nil?
+          ret = remember << "/" + token
+          remember = nil
+          ret
+        else
+          token
+        end
+      end
+      # the previous escaped / token joining returns nils, so remove them
+      names.compact!
+
+      # generate an array where each element is joined (by a '/') with its
+      # previous elements
+      req_resources = [names.shift]
+      names.each do |n|
+        req_resources << req_resources.last + "/" + n
+      end
+
+      # if we have a cascading key, we could access any possible Elektra
+      # namespace, thus we autorequire all of them
+      if self[:name][0] == '/'
+        ns_res = []
+        ["system", "user", "spec", "dir"].each do |ns|
+          req_resources.each do |name|
+            ns_res << ns + '/' + name
+          end
+        end
+        req_resources = ns_res
+      end
+      req_resources
+    end
+  end
+
 end

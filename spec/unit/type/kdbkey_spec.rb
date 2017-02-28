@@ -229,4 +229,47 @@ describe Puppet::Type.type(:kdbkey) do
     end
   end
 
+  context "auto requires kdbmounts" do
+
+    RSpec.shared_examples "autorequire kdbmounts" do |keyname, expected|
+      it "each possible mountpoint for '#{keyname}'" do
+        t = described_class.new({:name => keyname})
+        list = []
+        types = []
+        t.class.eachautorequire do |type,block|
+          types << type
+          list << t.instance_eval(&block)
+        end
+        list.flatten!
+
+        expect(types).to eq [:kdbmount]
+        expect(list).to eq expected
+      end
+    end
+
+    include_examples "autorequire kdbmounts", "user/test", ["user", "user/test"]
+    include_examples "autorequire kdbmounts",
+      "system/test",
+      ["system", "system/test"]
+
+    include_examples "autorequire kdbmounts",
+      "system/test/hello/world",
+      ["system", "system/test", "system/test/hello", "system/test/hello/world"]
+
+    include_examples "autorequire kdbmounts",
+      'system/test/hello\/escaped\/world/a/b',
+      ["system", "system/test", 'system/test/hello\/escaped\/world',
+       'system/test/hello\/escaped\/world/a',
+       'system/test/hello\/escaped\/world/a/b']
+
+    include_examples "autorequire kdbmounts", "/test/puppet", [
+      "system/test", "system/test/puppet",
+      "user/test", "user/test/puppet",
+      "spec/test", "spec/test/puppet",
+      "dir/test", "dir/test/puppet"
+    ]
+
+  end
+
+
 end

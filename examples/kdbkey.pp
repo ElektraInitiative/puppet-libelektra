@@ -182,3 +182,32 @@ kdbkey { 'spec/short2':
   check    => { type => short },
   value    => 5
 }
+
+
+
+#
+# autorequire
+#
+$mount_ar = 'user/test/puppet-ar'
+
+kdbkey { 'x1':
+  ensure => present,
+  prefix => $mount_ar,
+}
+
+kdbkey { 'x2':
+  prefix => $mount_ar,
+  value  => "hello"
+}
+
+kdbkey { "$mount_ar/x3": value => 'xx3' ;
+         "$mount_ar/x4": value => 'xx4' ;
+         "$mount_ar/x5": value => 'xx5' ;
+         "$mount_ar/x6": value => 'xx6' ;
+         "$mount_ar/x7": value => 'xx7' ;
+}
+
+kdbmount { $mount_ar:
+  file    => 'puppet-arxx.ini',
+  plugins => ['ini', 'type']
+}
