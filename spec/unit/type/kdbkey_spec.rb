@@ -187,6 +187,41 @@ describe Puppet::Type.type(:kdbkey) do
     end
   end
 
+  context "property 'check'" do
+    let(:params) { {:name => "user/test/puppet/x1"} }
+    it "exists and is optional" do
+      expect(described_class.new(params)[:check]).to be_nil
+    end
+
+    it "accepts a Hash" do
+      params[:check] = {"type" => "short"}
+      expect(described_class.new(params)[:check]).to eq params[:check]
+    end
+
+    it "accepts a String" do
+      params[:check] = "path"
+      expect(described_class.new(params)[:check]).to eq params[:check]
+    end
+
+    it "rejects values for a key within the 'spec' namespace" do
+      params[:name] = "spec/test/puppet/x1"
+      params[:check] = "path"
+      expect {
+        described_class.new(params)
+      }.to raise_error(Puppet::Error)
+    end
+
+    it "rejects values for a key within the 'spec' namespace "\
+       "and prefix is used" do
+      params[:prefix] = "spec/test"
+      params[:name] = "puppet/x1"
+      params[:check] = "path"
+      expect {
+        described_class.new(params)
+      }.to raise_error(Puppet::Error)
+    end
+  end
+
   context "parameter 'user'" do
     let(:params) { {:name => "user/test/puppet/x1"} }
     it "exists and is optional" do

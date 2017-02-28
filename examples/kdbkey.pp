@@ -40,9 +40,9 @@ kdbkey { "${ns}/x4":
 }
 
 kdbkey { "${ns}-test/section1/setting1":
-  ensure          => present,
-  value           => 'hello ini world ...',
-  metadata        => {
+  ensure   => present,
+  value    => 'hello ini world ...',
+  metadata => {
     'comments'    => '#1',
     'comments/#0' => '# this is the first comment line',
     'comments/#1' => '# this is the second comment line'
@@ -91,8 +91,94 @@ kdbkey { 'something else':
 #
 # set keys in the context of a given user
 #
-kdbkey { 'user/test/puppet/usertest/x1':
-  value => 'asdf',
-  user  => 'bernhard',
-  #provider => 'kdb'
+# kdbkey { 'user/test/puppet/usertest/x1':
+#   value => 'asdf',
+#   user  => 'bernhard',
+#   #provider => 'kdb'
+# }
+
+
+#
+# validation
+#
+$ns_validation = 'user/test/puppet-val'
+
+# we require some validation plugins activated
+# on the mountpoint corresponding to our settings
+kdbmount { $ns_validation:
+  file    => 'puppet-val.ini',
+  plugins => ['ini', 'type', 'enum', 'path', 'validation'],
+}
+
+# ensure our setting is of type 'short'
+# (see '$> kdb info type' for other types)
+kdbkey { 'spec/x1':
+  prefix  => $ns_validation,
+  value   => 5,
+  check   => {
+    'type' => 'short'
+  },
+  # TODO: autorequire??
+  require => Kdbmount[$ns_validation]
+}
+
+kdbkey { 'spec/x2':
+  prefix => $ns_validation,
+  value  => '5',
+  check  => {'type' => 'short' }
+}
+
+# the type plugin is also aware of doing range checks
+kdbkey { 'spec/x3':
+  prefix => $ns_validation,
+  value  => 10,
+  check  => {
+    'type'     => 'short',
+    'type/min' => 0,  # lower bound
+    'type/max' => 10  # upper bound
+  }
+}
+
+# enums with array of values
+kdbkey { 'spec/enumx':
+  prefix => $ns_validation,
+  check  => {'enum' => ['low', 'middle', 'high']},
+  value  => 'low',
+}
+
+# or specify allowed values with on string
+# (Note: allowed values have to be enclosed in single quotes and
+# seperated by ", ")
+kdbkey { 'spec/enum_x2':
+  prefix => $ns_validation,
+  check  => { 'enum' => "'one', 'two', three'" },
+  value  => 'one'
+}
+
+# ensure only valid absolute path names are used
+kdbkey { 'spec/path_key':
+  prefix => $ns_validation,
+  check  => 'path',
+  value  => '/this/is/an/abolute/path'
+}
+
+# do regular expression checks on key settings
+kdbkey { 'spec/regex_key':
+  prefix         => $ns_validation,
+  check          => {
+    'validation' => '^hello (world|master)$',
+    #'validation/ignorecase' => 0,
+  },
+  value  => 'hello world',
+}
+
+kdbkey { 'spec/short2':
+  comments => "
+
+ this is a simple short value
+
+ no bound checks are performed",
+  prefix   => $ns_validation,
+  check    => { type => short },
+  value    => 5
 }

@@ -14,6 +14,7 @@ module Puppet
 
     # static class var for checking if we are able to use this provider
     @@have_kdb = true
+    @@is_fake_ks = false
 
     begin
       # load libelektra Ruby binding extension
@@ -37,6 +38,7 @@ module Puppet
     # just used during testing to inject a mock
     def self.use_fake_ks(ks)
       @@ks = ks
+      @@is_fake_ks = true
     end
 
     # allow access to internal key, used during testing
@@ -45,6 +47,7 @@ module Puppet
     def create
       #puts "ruby create #{@resource[:name]}"
       @resource_key = Kdb::Key.new @resource[:name], value: @resource[:value]
+      self.check= @resource[:check] unless @resource[:check].nil?
       self.metadata= @resource[:metadata] unless @resource[:metadata].nil?
       self.comments= @resource[:comments] unless @resource[:comments].nil?
       @@ks << @resource_key
@@ -151,13 +154,65 @@ module Puppet
       end
     end
 
+    def check
+      spec_hash = {}
+      spec_key = @@ks.lookup get_spec_key_name
+      unless spec_key.nil?
+        spec_key.meta.each do |m|
+          if /^check\/(.*)$/ =~ m.name
+            check_name = $1
+            if /^(\w+)\/#\d+$/ =~ check_name
+              spec_hash[$1] = [] unless spec_hash[$1].is_a? Array
+              spec_hash[$1] << m.value
+            else
+              spec_hash[check_name] = m.value
+            end
+          end
+        end
+      end
+      # special case: if we get just one key and its value
+      # is "", return this as a string
+      if spec_hash.size == 1 and spec_hash.values[0] == ""
+        spec_hash = spec_hash.keys[0]
+      end
+      Puppet.debug "having spec: #{spec_hash}"
+      return spec_hash
+    end
+
+    def check=(value)
+      Puppet.debug "setting spec: #{value}"
+      spec_key = Kdb::Key.new get_spec_key_name
+
+      if @@ks.lookup(spec_key).nil?
+        @@ks << spec_key
+      else
+        spec_key = @@ks.lookup spec_key
+      end
+
+      spec_to_set = specified_checks_to_meta value
+
+      # set meta data on spec_key
+      spec_to_set.each do |spec_name, spec_value|
+        spec_key[spec_name] = spec_value
+      end
+
+      # remove all not specified meta keys from spec_key starting with 'check'
+      spec_key.meta.each do |e|
+        if e.name.start_with? "check" and !spec_to_set.include? e.name
+          spec_key.del_meta e.name
+        end
+      end
+    end
+
 
     # flush is call if a resource was modified
     # thus this method is perfectly suitable for our db.set method which will
     # finally bring the changes to disk
     def flush
-      Puppet.debug "kdbkey/ruby: flush #{@resource[:name]}"
-      @@db.set @@ks, "/"
+      unless @@is_fake_ks
+        Puppet.debug "kdbkey/ruby: flush #{@resource[:name]}"
+        @@db.set @@ks, "/"
+      end
     end
 
     # this is the provider de-init hook

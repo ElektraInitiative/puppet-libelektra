@@ -12,33 +12,35 @@
 
 class KdbKeyProviderHelper
   attr :test_prefix
+  attr :ks
 
-  def initialize(_test_prefix)
+  def initialize(_test_prefix, _ks = Kdb::KeySet.new)
     @test_prefix = _test_prefix
+    @ks = _ks
   end
 
-  def ensure_key_exists(ks, keyname, value = "test")
-    key = ks.lookup keyname
+  def ensure_key_exists(keyname, value = "test")
+    key = @ks.lookup keyname
     if key.nil?
-      ks << key = Kdb::Key.new(keyname)
+      @ks << key = Kdb::Key.new(keyname)
     end
     key.value = value
   end
 
-  def ensure_meta_exists(ks, keyname, meta, value = "test")
-    key = ks.lookup keyname
+  def ensure_meta_exists(keyname, meta, value = "test")
+    key = @ks.lookup keyname
     if key.nil?
       key = Kdb::Key.new(keyname)
-      ks << key
+      @ks << key
     end
     key.set_meta meta, value
   end
 
-  def ensure_comment_exists(ks, keyname, comment = "test")
-    key = ks.lookup keyname
+  def ensure_comment_exists(keyname, comment = "test")
+    key = @ks.lookup keyname
     if key.nil?
       key = Kdb::Key.new keyname
-      ks << key
+      @ks << key
     end
     # delete old comment first
     key.meta.each do |e|
@@ -51,19 +53,19 @@ class KdbKeyProviderHelper
     end
   end
 
-  def ensure_key_is_missing(ks, keyname)
-    unless ks.lookup(keyname).nil?
-      ks.delete keyname
+  def ensure_key_is_missing(keyname)
+    unless @ks.lookup(keyname).nil?
+      @ks.delete keyname
     end
   end
 
-  def ensure_meta_is_missing(ks, keyname, meta)
-    key = ks.lookup keyname
+  def ensure_meta_is_missing(keyname, meta)
+    key = @ks.lookup keyname
     key.del_meta meta unless key.nil?
   end
 
-  def ensure_comment_is_missing(ks, keyname)
-    key = ks.lookup keyname
+  def ensure_comment_is_missing(keyname)
+    key = @ks.lookup keyname
     unless key.nil?
       key.meta.each do |m|
         key.del_meta m if m.name.start_with? COMMENT
@@ -71,45 +73,45 @@ class KdbKeyProviderHelper
     end
   end
 
-  def check_key_exists(ks, name)
-    !ks.lookup(name).nil?
+  def check_key_exists(name)
+    !@ks.lookup(name).nil?
   end
 
-  def check_meta_exists(ks, keyname, meta)
-    key = ks.lookup keyname
+  def check_meta_exists(keyname, meta)
+    key = @ks.lookup keyname
     unless key.nil?
       return key.has_meta? meta
     end
     false
   end
 
-  def check_comment_exists(ks, keyname)
-    key = ks.lookup keyname
+  def check_comment_exists(keyname)
+    key = @ks.lookup keyname
     unless key.nil?
       return (key.has_meta?(COMMENT) or key.has_meta?(COMMENT+"/#0"))
     end
     false
   end
 
-  def key_get_value(ks, keyname)
-    key = ks.lookup keyname
+  def key_get_value(keyname)
+    key = @ks.lookup keyname
     unless key.nil?
       return key.value
     end
     nil
   end
 
-  def key_get_meta(ks, keyname, meta)
-    key = ks.lookup keyname
+  def key_get_meta(keyname, meta)
+    key = @ks.lookup keyname
     unless key.nil?
       return key[meta]
     end
     nil
   end
 
-  def key_get_comment(ks, keyname)
+  def key_get_comment(keyname)
     comment = nil
-    key = ks.lookup keyname
+    key = @ks.lookup keyname
     unless key.nil?
       key.meta.find_all do |e|
         e.name.start_with? COMMENT+"/#"

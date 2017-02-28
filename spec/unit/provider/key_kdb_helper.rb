@@ -34,84 +34,86 @@ class KdbKeyProviderHelperKDB < KdbKeyProviderHelper
     raise ArgumentError, "block required" unless block_given?
 
     Kdb.open do |kdb|
-      ks = Kdb::KeySet.new
-      kdb.get ks, @test_prefix
-      result = yield ks
-      kdb.set ks, @test_prefix
+      # make cascading
+      @test_prefix.gsub!(/^\w+\//, '/')
+      @ks = Kdb::KeySet.new
+      kdb.get @ks, @test_prefix
+      result = yield
+      kdb.set @ks, @test_prefix
       return result
     end
   end
 
 
   def ensure_key_exists(keyname, value = "test")
-    do_on_kdb do |ks|
-      ks_ensure_key_exists ks, keyname, value
+    do_on_kdb do
+      ks_ensure_key_exists keyname, value
     end
   end
 
   def ensure_meta_exists(keyname, meta, value = "test")
-    do_on_kdb do |ks|
-      ks_ensure_meta_exists ks, keyname, meta, value
+    do_on_kdb do
+      ks_ensure_meta_exists keyname, meta, value
     end
   end
 
   def ensure_comment_exists(keyname, comment = "test")
-    do_on_kdb do |ks|
-      ks_ensure_comment_exists ks, keyname, comment
+    do_on_kdb do
+      ks_ensure_comment_exists keyname, comment
     end
   end
 
   def ensure_key_is_missing(keyname)
-    do_on_kdb do |ks|
-      ks_ensure_key_is_missing ks, keyname
+    do_on_kdb do
+      ks_ensure_key_is_missing keyname
     end
   end
 
   def ensure_meta_is_missing(keyname, meta)
-    do_on_kdb do |ks|
-      ks_ensure_meta_is_missing ks, keyname, meta
+    do_on_kdb do
+      ks_ensure_meta_is_missing keyname, meta
     end
   end
 
   def ensure_comment_is_missing(keyname)
-    do_on_kdb do |ks|
-      ks_ensure_comment_is_missing ks, keyname
+    do_on_kdb do
+      ks_ensure_comment_is_missing keyname
     end
   end
 
   def check_key_exists(name)
-    do_on_kdb do |ks|
-      ks_check_key_exists ks, name
+    do_on_kdb do
+      ks_check_key_exists name
     end
   end
 
   def check_meta_exists(keyname, meta)
-    do_on_kdb do |ks|
-      ks_check_meta_exists ks, keyname, meta
+    do_on_kdb do
+      ks_check_meta_exists keyname, meta
     end
   end
 
   def check_comment_exists(keyname)
-    do_on_kdb do |ks|
-      ks_check_comment_exists ks, keyname
+    do_on_kdb do
+      ks_check_comment_exists keyname
     end
   end
 
   def key_get_value(keyname)
-    do_on_kdb do |ks|
-      ks_key_get_value ks, keyname
+    do_on_kdb do
+      ks_key_get_value keyname
     end
   end
 
   def key_get_meta(keyname, meta)
-    do_on_kdb do |ks|
-      ks_key_get_meta ks, keyname, meta
+    do_on_kdb do
+      ks_key_get_meta keyname, meta
     end
   end
 
   def key_get_comment(keyname)
-    do_on_kdb do |ks|
-      ks_key_get_comment ks, keyname
+    do_on_kdb do
+      ks_key_get_comment keyname
     end
   end
 

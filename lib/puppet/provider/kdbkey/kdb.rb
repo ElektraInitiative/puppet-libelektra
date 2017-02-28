@@ -7,6 +7,7 @@
 # @copyright BSD License (see LICENSE or http://www.libelektra.org)
 #
 #
+require 'tempfile'
 
 module Puppet
   Type.type(:kdbkey).provide :kdb, :parent => Puppet::Provider::KdbKeyCommon do
@@ -25,6 +26,7 @@ module Puppet
     def create
       self.value=(@resource[:value])
       self.metadata= @resource[:metadata] unless @resource[:metadata].nil?
+      self.comments= @resource[:comments] unless @resource[:comments].nil?
     end
 
     def destroy
@@ -35,7 +37,6 @@ module Puppet
       Puppet.debug "kdbkey/kdb exists? #{@resource[:name]}"
       output = execute([command(:kdb), "get", @resource[:name]],
                                :failonfail => false)
-      #puts "output: #{output}, #{output.exitstatus}"
       output.exitstatus == 0
     end
 
@@ -47,82 +48,178 @@ module Puppet
       run_kdb ["set", @resource[:name], value]
     end
 
-    def metadata
-      @metadata_values = {}
-      output = run_kdb ["lsmeta", @resource[:name]]
-      output.split.each do |metaname|
-        # skip internal keys
-        next if skip_this_metakey? metaname, true
-        # skip this metakey, if purge meta keys is NOT set and this
-        # key is not specified by the user
-        unless @resource.purge_meta_keys? or @resource[:metadata].nil?
-          next unless @resource[:metadata].include? metaname
-        end
+    def read_metadata_values
+      read_metadata_values_from_key @resource[:name]
+    end
 
-        # foreach meta key, fetch its value
-        gm = run_kdb(["getmeta", @resource[:name], metaname], {
-          :combine    => false,
-          :failonfail => false}
-        )
-        if gm.exitstatus == 0
-          @metadata_values[metaname.strip] = gm.chomp
+    def read_metadata_values_from_key(key_to_read_from)
+      puts "read meta data from key '#{key_to_read_from}'" if @verbose
+      @metadata_values = {}
+      Tempfile.open("key") do |file|
+        run_kdb ["export", key_to_read_from, "ni", file.path]
+        # reopen file
+        file.open
+        metadata_reached = false
+        file.each do |line|
+          line.chomp!
+          puts "read meta: '#{line}'" if @verbose
+          if line == "[]"
+            metadata_reached = true
+            next
+          end
+          next if metadata_reached == false
+
+          key_name, key_value = line.split(" = ")
+          key_name.strip!
+
+          puts "use meta: '#{key_name}' => '#{key_value}'" if @verbose
+          @metadata_values[key_name] = key_value.to_s # ensure we have a string
         end
+        file.close!
       end
       return @metadata_values
     end
 
-    def metadata=(value)
-      value.each do |metaname, metavalue|
-        run_kdb ["setmeta", @resource[:name], metaname, metavalue]
+    def metadata
+      read_metadata_values unless @metadata_values.is_a? Hash
+      ret = @metadata_values.reject do |k,v|
+        # do not keep this key_name
+        delete = (
+          # if it is an internal key (unless specified)
+          skip_this_metakey?(k, true) or 
+          # or unless purge_meta_keys == true or k is specified
+          not(
+            @resource[:metadata].nil? or @resource.purge_meta_keys? or
+            @resource[:metadata].include? k
+          )
+        )
+        delete
       end
-      # handle purge_meta_keys
-      if @resource.purge_meta_keys? and @metadata_values.is_a? Hash
-        @metadata_values.each do |m,v|
-          next if value.include? m
-          next if m == "comments" or m.start_with? "comment/", "comments/"
-          next if m.start_with? "internal/"
-          next if m == "order"
+      puts "metadata is: #{ret}" if @verbose
+      ret
+    end
 
-          # currently there is no rmmeta command for kdb
-          run_kdb ["setmeta", @resource[:name], m, '']
+    def metadata=(value)
+      read_metadata_values unless @metadata_values.is_a? Hash
+      puts "having metadata: #{@metadata_values}" if @verbose
+      value.each do |k,v|
+        @metadata_values[k] = v
+      end
+      if @resource.purge_meta_keys?
+        @metadata_values.keep_if do |k,v|
+          keep = (@resource[:metadata].include?(k) or is_special_meta_key?(k))
+          puts "keep this meta: '#{k}' #{keep}" if @verbose
+          keep
         end
       end
+      puts "updated metadata: #{@metadata_values}" if @verbose
     end
 
     def comments
-      metadata unless @metadata_values.is_a? Hash
-      comments = ""
+      read_metadata_values unless @metadata_values.is_a? Hash
+      comments = {}
       @metadata_values.each do |meta, value|
-        if /^comments?\/#/ =~ meta
-          comments << "\n" unless comments.empty?
-          comments << value.sub(/^#/, '')
+        if /^comments?\/#(\d+)/ =~ meta
+          value = value[1..-1] if value[0] == '"'
+          value = value[0..-2] if value[-1] == '"'
+          comments[$1] = value.sub(/^#/, '')
         end
       end
-      return comments
+      # we get a hash, with 
+      #  #num => line
+      # so sort by #num, take the lines and join with newline
+      comments = comments.sort_by{|k,v| k}.map{|e|e[1]}.join "\n"
+      comments
     end
 
     def comments=(value)
-      metadata unless @metadata_values.is_a? Hash
+      self.metadata unless @metadata_values.is_a? Hash
       comment_lines = value.split "\n"
 
-      updated = []
+      # remove all comment meta keys
+      @metadata_values.delete_if { |k,v| k.start_with? "comment" }
+
+      @metadata_values["comments"] = "##{comment_lines.size}"
       comment_lines.each_with_index do |line, index|
-        updated << meta_name = "comments/##{index}"
-        run_kdb ["setmeta", @resource[:name], meta_name, line]
-      end
-
-      @metadata_values.each do |k, v|
-        # update comments count value
-        if k == "comments"
-          run_kdb ["setmeta", @resource[:name], k, "##{comment_lines.size}"]
-        end
-
-        if k.start_with? "comments/#" and !updated.include? k
-          run_kdb ["setmeta", @resource[:name], k, '']
-        end
+        @metadata_values["comments/##{index}"] = line
       end
     end
 
+    def check
+      @spec_meta_values = read_metadata_values_from_key(get_spec_key_name)
+      specs = {}
+      @spec_meta_values.each do |k,v|
+        # we are interested in meta keys starging with 'check/'
+        if /^check\/(.*)$/ =~ k
+          check_name = $1
+          # if it is an elektra Array, convert it to a Ruby array
+          # while preserve order
+          if /^(\w+)\/#(\d+)$/ =~ check_name
+            check_name, index = $1, $2.to_i
+            specs[check_name] = [] unless specs[check_name].is_a? Array
+            specs[check_name][index] = v
+          else
+            specs[check_name] = v
+          end
+        end
+      end
+      if specs.size == 1 and specs.values[0].to_s.empty?
+        specs = specs.keys[0]
+      end
+      puts "spec_keys: #{specs}" if @verbose
+      return specs
+    end
 
+    def check=(value)
+      self.check unless @spec_meta_values.is_a? Hash
+
+      spec_to_set = specified_checks_to_meta value
+      @spec_meta_values.merge! spec_to_set
+      @spec_meta_values.delete_if do |k,v|
+        (k.start_with? "check" and not spec_to_set.include? k)
+      end
+      Tempfile.open("speckey") do |file|
+        file.puts
+        file.puts " = "
+        file.puts
+        file.puts "[]"
+        @spec_meta_values.each do |k,v|
+          file.puts " #{k} = #{v}"
+        end
+        file.flush
+        begin
+          file.rewind
+          file.each do |line|
+            puts "import spec: #{line}"
+          end
+        end if @verbose
+        file.close
+        run_kdb ["import", get_spec_key_name, "ni", file.path]
+        file.unlink
+      end
+    end
+
+    def flush
+      return unless @metadata_values.is_a? Hash
+      Tempfile.open("key") do |file|
+        file.puts
+        file.puts " = #{@resource[:value]}"
+        file.puts
+        file.puts "[]"
+        @metadata_values.each do |k,v|
+          file.puts " #{k} = #{v}"
+        end
+        file.flush
+        begin
+          file.rewind
+          file.each do |line|
+            puts "import: #{line}"
+          end
+        end if @verbose
+        file.close
+        run_kdb ["import", @resource[:name], "ni", file.path]
+        file.unlink
+      end
+    end
   end
 end

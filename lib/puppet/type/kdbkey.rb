@@ -179,6 +179,119 @@ Puppet::Type.newtype(:kdbkey) do
     end
   end
 
+  newproperty(:check) do
+    desc <<-EOT
+    Add value validation.
+
+    This property allows to define certain restrictions to be applied on the
+    key value, which are automatically checked on each key database write. These
+    validation checks are performed by Elektra itself, so modifications done
+    by other applications will be also restricted to the defined value
+    specifications.
+
+    The value for this property can be either a single String or a Hash
+    of settings.
+    e.g. path plugin
+      the 'path' plugin does not require any additional settings
+      so it is enough to just pass 'path' as 'check' value.
+
+      kdbkey { 'system/sw/myapp/setting1':
+        check => 'path',
+        value => '/some/absolute/path/will/pass'
+      }
+
+      Note: this does not check if the path really exists (instead it just
+      issues a warning). The check will fail, if the given value is not an
+      absolute path.
+
+    e.g. network plugin
+
+      The network plugin checks if the supplied value is valid IP address.
+
+      kdbkey { 'system/sw/myapp/myip':
+        check => 'ipaddr',
+        value => ${given_myip}
+      }
+
+      to check for valid IPv4 addresses use
+
+      kdbkey { 'system/sw/myapp/myip':
+        check => { 'ipaddr' => 'ipv4' },   # works with 'ipv6' too
+        value => ${given_myip}
+      }
+
+    e.g. type plugin
+
+      The type plugin checks if the supplied key value conforms to a defined
+      data type (e.g. numeric value). Additionally, it is able to check if
+      the supplied key value is within an allowed range.
+
+      kdbkey { 'system/sw/myapp/port':
+        check => { 'type' => 'unsigned_long' },
+        value => ${given_port}
+      }
+
+      kdbkey { 'system/sw/myapp/num_instances':
+        check => {
+          'type' => 'short',
+          'type/min' => 1,
+          'type/max' => 20
+        },
+        value => ${given_num_instance}
+      }
+
+    e.g. enum plugin
+
+      The enum plugin check it the supplied value is within a predefined set
+      of values. Two different formats are possible:
+
+      kdbkey { 'system/sw/myapp/scheduler':
+        check => { 'enum' => "'ondemand', 'performance', 'energy saving'" },
+        value => ${given_scheduler}
+      }
+
+      kdbkey { 'system/sw/myapp/notification':
+        check => { 'enum' => ['off', 'email', 'slack', 'irc'] },
+        value => ${given_notification}
+      }
+
+    e.g. validation plugin
+
+      The validation plugin checks if the supplied value matches a predefined
+      regular expression:
+
+      kdbkey { 'system/sw/myapp/email':
+        check => {
+          'validation' => '^[a-z0-9\._]+@mycompany.com$'
+          'validation/message' => 'we require an internal email address here',
+          'validation/ignorecase' => '',  # existence of flag is enough
+        }
+        ...
+      }
+
+
+    For further check plugins see the Elektra documentation.
+
+    Note: for each 'check/xxx' metadata, required by the Elektra plugins, just
+    remove the 'check/' part and add it to the 'check' property here.
+    (e.g. validation plugin: 'check/validation' => 'validation' ...)
+    EOT
+
+    validate do |value|
+      # setting specifications for spec/ keys does not make any sense
+      # so we do not allow it
+      if @resource[:name].start_with? "spec/"
+        raise ArgumentError, "setting specifications on a 'spec' key "\
+                             "is not allowed and does not make sense"
+      end
+      unless value.is_a? Hash or value.is_a? String
+        raise ArgumentError, "Hash required"
+      else
+        super value
+      end
+    end
+  end
+
   # param user
   #
   # This is currently only supported by Provider 'kdb'.
