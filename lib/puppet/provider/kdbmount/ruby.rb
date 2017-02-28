@@ -16,7 +16,7 @@ module Puppet
 
     begin
       require 'kdbtools'
-    rescue
+    rescue LoadError
       @@have_kdb = false
     end
 

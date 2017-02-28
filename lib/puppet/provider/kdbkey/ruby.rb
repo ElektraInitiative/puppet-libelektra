@@ -23,8 +23,11 @@ module Puppet
       @@have_kdb = false
     end
 
-    # make this provider default for Linux systems
-    defaultfor :kernel => :Linux
+    # make this provider always to be default (aslong it is useable
+    #defaultfor :kernel => :Linux
+    def self.default?
+      @@have_kdb
+    end
     # if we can load the 'kdb' extension
     confine :true => @@have_kdb
 
