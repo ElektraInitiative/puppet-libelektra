@@ -21,7 +21,7 @@ describe Puppet::Type.type(:kdbkey).provider(:ruby) do
   let(:provider) { described_class.new }
 
   before :example do
-    described_class.use_fake_ks h.ks
+    provider.use_fake_ks h.ks
     provider.resource = create_resource :name => keyname
   end
 
