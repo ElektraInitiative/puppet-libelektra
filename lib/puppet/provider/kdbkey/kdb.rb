@@ -24,7 +24,8 @@ module Puppet
     end
 
     def create
-      self.value=(@resource[:value])
+      self.value= @resource[:value]
+      self.check= @resource[:check] unless @resource[:check].nil?
       self.metadata= @resource[:metadata] unless @resource[:metadata].nil?
       self.comments= @resource[:comments] unless @resource[:comments].nil?
     end

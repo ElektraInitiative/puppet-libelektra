@@ -44,6 +44,7 @@ RSpec.shared_examples "a kdbkey provider" do |not_testable_with_kdb|
   context "should create key" do
     before :example do
       h.ensure_key_is_missing keyname
+      h.ensure_key_is_missing provider.get_spec_key_name
     end
 
     it "with defined name" do
@@ -99,6 +100,33 @@ RSpec.shared_examples "a kdbkey provider" do |not_testable_with_kdb|
         expect(h.key_get_meta keyname, k).to eq(v)
       end
       expect(h.key_get_comment keyname).to eq comments
+    end
+
+    it "with defined name, value, meta, comments and spec" do
+      value = "5"
+      meta = {"nvmcs" => "some value"}
+      comments = "other comments"
+      checks = {'type' => 'short'}
+
+      provider.resource = create_resource :name => keyname,
+                                          :value => value,
+                                          :metadata => meta,
+                                          :comments => comments,
+                                          :check => checks
+
+      provider.create
+      provider.flush
+
+      expect(h.check_key_exists keyname).to eq true
+      expect(h.key_get_value keyname).to eq value
+      meta.each do |k, v|
+        expect(h.key_get_meta keyname, k).to eq(v)
+      end
+      expect(h.key_get_comment keyname).to eq comments
+      expect(h.check_key_exists provider.get_spec_key_name).to eq true
+      expect(
+        h.key_get_meta provider.get_spec_key_name, 'check/type'
+      ).to eq 'short'
     end
 
 
