@@ -51,6 +51,9 @@ class Puppet::Provider::KdbKeyCommon < Puppet::Provider
           check_value.each_with_index do |v, index|
             spec_to_set["check/#{check_key}/##{index}"] = v
           end
+          # at least the 'enum' plugin requires to have the last array index
+          # set at its root key => check/enum = #x
+          spec_to_set["check/#{check_key}"] = "##{check_value.size - 1}"
         else
           spec_to_set["check/#{check_key}"] = check_value
         end

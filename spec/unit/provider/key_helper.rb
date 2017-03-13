@@ -540,10 +540,12 @@ EOT
             h.key_get_meta spec_key, "check/#{c}"
           ).to eq v
         end
+        expect(h.key_get_meta spec_key, "check/enum").to eq "#2"
       end
 
       it "update spec for a single check with multiple values (array)" do
-        { "enum/#0" => "x0",
+        { "enum"    => "#3",
+          "enum/#0" => "x0",
           "enum/#1" => "x1",
           "enum/#2" => "x2",
           "enum/#3" => "x3"}.each do |k,v|
@@ -558,6 +560,7 @@ EOT
             h.key_get_meta spec_key, "check/#{c}"
           ).to eq v
         end
+        expect(h.key_get_meta spec_key, "check/enum").to eq "#2"
         expect(
           h.check_meta_exists spec_key, "check/enum/#3"
         ).to eq false
