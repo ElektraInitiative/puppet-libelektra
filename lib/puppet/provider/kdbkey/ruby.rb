@@ -8,6 +8,8 @@
 #
 #
 
+require 'puppet/provider/kdbkey/common'
+
 module Puppet
   Type.type(:kdbkey).provide :ruby, :parent => Puppet::Provider::KdbKeyCommon do
     desc "kdb through libelektra Ruby API"
@@ -149,7 +151,7 @@ module Puppet
       end
     end
 
-    # currently Elektra plugins implement a not consistent way of specifying 
+    # currently Elektra plugins implement a not consistent way of specifying
     # comments. So store the used metakey name to use the same one when writing the
     # comments. see https://github.com/ElektraInitiative/libelektra/issues/1375
     @comments_key_name = "comments"
@@ -183,8 +185,11 @@ module Puppet
       # update all comment lines
       comment_lines.each_with_index do |line, index|
         puts "comments keyname: #{@comments_key_name}" if @verbose
+        # currently hosts plugin treats #0 comment as inline comment
+        #@resource_key.set_meta "#{@comments_key_name}/##{index + 1}", "##{line}"
         @resource_key.set_meta "#{@comments_key_name}/##{index}", "##{line}"
       end
+      #@resource_key.set_meta "#{@comments_key_name}/#0", ''
 
       # iterate over all meta keys and remove all comment keys which
       # represent a comment line, which does not exist any more

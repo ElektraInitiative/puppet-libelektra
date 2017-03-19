@@ -7,6 +7,8 @@
 # @copyright BSD License (see LICENSE or http://www.libelektra.org)
 #
 #
+
+require 'puppet/provider/kdbkey/common'
 require 'tempfile'
 
 module Puppet
@@ -41,7 +43,7 @@ module Puppet
       output.exitstatus == 0
     end
 
-    def value 
+    def value
       run_kdb ["sget", "--color=never", @resource[:name], "''"]
     end
 
@@ -87,7 +89,7 @@ module Puppet
         # do not keep this key_name
         delete = (
           # if it is an internal key (unless specified)
-          skip_this_metakey?(k, true) or 
+          skip_this_metakey?(k, true) or
           # or unless purge_meta_keys == true or k is specified
           not(
             @resource[:metadata].nil? or @resource.purge_meta_keys? or
@@ -126,7 +128,7 @@ module Puppet
           comments[$1] = value.sub(/^#/, '')
         end
       end
-      # we get a hash, with 
+      # we get a hash, with
       #  #num => line
       # so sort by #num, take the lines and join with newline
       comments = comments.sort_by{|k,v| k}.map{|e|e[1]}.join "\n"
