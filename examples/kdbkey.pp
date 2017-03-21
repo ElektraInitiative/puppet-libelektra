@@ -107,19 +107,18 @@ $ns_validation = 'user/test/puppet-val'
 # on the mountpoint corresponding to our settings
 kdbmount { $ns_validation:
   file    => 'puppet-val.ini',
-  plugins => ['ini', 'type', 'enum', 'path', 'validation'],
+  plugins => ['ini', 'type', 'enum', 'validation', 'range'],
 }
 
 # ensure our setting is of type 'short'
 # (see '$> kdb info type' for other types)
 kdbkey { 'spec/x1':
-  prefix  => $ns_validation,
-  value   => 5,
-  check   => {
-    'type' => 'short'
+  prefix    => $ns_validation,
+  value     => 7,
+  check     => {
+    'range' => '0-10'
   },
-  # TODO: autorequire??
-  require => Kdbmount[$ns_validation]
+  provider => 'ruby'
 }
 
 kdbkey { 'spec/x2':
@@ -190,21 +189,22 @@ kdbkey { 'spec/short2':
 #
 $mount_ar = 'user/test/puppet-ar'
 
-kdbkey { 'x1':
+kdbkey { 's1/x1':
   ensure => present,
   prefix => $mount_ar,
 }
 
-kdbkey { 'x2':
+kdbkey { 's3/x2':
   prefix => $mount_ar,
   value  => "hello"
 }
 
-kdbkey { "$mount_ar/x3": value => 'xx3' ;
-         "$mount_ar/x4": value => 'xx4' ;
-         "$mount_ar/x5": value => 'xx5' ;
-         "$mount_ar/x6": value => 'xx6' ;
-         "$mount_ar/x7": value => 'xx7' ;
+kdbkey { 
+  "$mount_ar/s2/x3": value => 'xx3', metadata => {'internal/ini/key/number' => '1'};
+  "$mount_ar/s2/x4": value => 'xx4', metadata => {'internal/ini/key/number' => '2'};
+  "$mount_ar/s2/x5": value => 'xx5', metadata => {'internal/ini/key/number' => '3'};
+  "$mount_ar/s2/x6": value => 'xx6', metadata => {'internal/ini/key/number' => '4'};
+  "$mount_ar/s2/x7": value => 'xx7', metadata => {'internal/ini/key/number' => '5'};
 }
 
 kdbmount { $mount_ar:

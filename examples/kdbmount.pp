@@ -13,12 +13,6 @@ kdbmount { 'system/sw/ssh/sshd':
   #plugins => ['sync', 'ini']
 }
 
-kdbmount { 'system/network/hosts':
-  ensure  => present,
-  file    => '/etc/hosts',
-  plugins => 'hosts'
-}
-
 kdbmount { '/test/cascading':
   ensure  => present,
   file    => 'test.ini',
