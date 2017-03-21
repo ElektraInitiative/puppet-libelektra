@@ -62,6 +62,12 @@ module Puppet
 
     def destroy
       @ks.delete @resource[:name] unless @resource_key.nil?
+      # check if there are array keys left
+      @ks.each do |x|
+        if x.name =~ /^#{@resource[:name]}\/#\d+$/
+          @ks.delete x
+        end
+      end
     end
 
     # is called first for each managed resource
@@ -108,10 +114,10 @@ module Puppet
 
       # array value
       value = []
-      @ks.select do |x| 
-        x.name.start_with? "#{@resource_key.name}/#"
-      end.each do
-        |x| value << x.value
+      @ks.each do |x| 
+        if x.name =~ /^#{@resource_key.name}\/#\d+$/
+          value << x.value
+        end
       end
       value
     end

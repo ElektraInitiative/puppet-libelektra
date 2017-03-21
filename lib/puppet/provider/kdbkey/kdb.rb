@@ -34,6 +34,12 @@ module Puppet
 
     def destroy
       run_kdb ["rm", @resource[:name]]
+      # remove possible array elements
+      list_keys.each do |x|
+        if x =~ /#{@resource[:name]}\/#\d+/
+          run_kdb ["rm", x]
+        end
+      end
     end
 
     def exists?
@@ -43,9 +49,13 @@ module Puppet
       output.exitstatus == 0
     end
 
-    def value
+    def list_keys
       output = run_kdb ["ls", "--color=never", @resource[:name]]
-      elems = output.split
+      return output.split
+    end
+
+    def value
+      elems = list_keys
 
       unless elems.include? "#{@resource[:name]}/#0"
         # single value key

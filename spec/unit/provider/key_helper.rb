@@ -132,14 +132,30 @@ RSpec.shared_examples "a kdbkey provider" do |not_testable_with_kdb|
 
   end
 
-  it "should remove key on destroy" do
-    h.ensure_key_exists keyname
-    # we have to call exists? first
-    provider.exists?
-    provider.destroy
-    provider.flush
+  context "should remove key on destroy" do
+    it "for single value keys" do
+      h.ensure_key_exists keyname
+      # we have to call exists? first
+      provider.exists?
+      provider.destroy
+      provider.flush
 
-    expect(h.check_key_exists keyname).to eq false
+      expect(h.check_key_exists keyname).to eq false
+    end
+
+    it "for array value keys" do
+      h.ensure_key_exists keyname, ''
+      h.ensure_key_exists "#{keyname}/#0" 'one'
+      h.ensure_key_exists "#{keyname}/#1" 'one'
+
+      provider.exists?
+      provider.destroy
+      provider.flush
+
+      expect(h.check_key_exists keyname).to eq false
+      expect(h.check_key_exists "#{keyname}/#0").to eq false
+      expect(h.check_key_exists "#{keyname}/#1").to eq false
+    end
   end
 
   context "with existing key" do
