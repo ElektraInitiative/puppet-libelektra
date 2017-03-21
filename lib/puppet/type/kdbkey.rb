@@ -107,6 +107,19 @@ Puppet::Type.newtype(:kdbkey) do
     desc <<-EOT
       Desired value of the key.
       EOT
+
+    def change_to_s(current_value, new_value)
+      def single_elem_as_string(v)
+        return "" if v.nil?
+        if v.is_a? Array and v.size == 1
+          return v[0].to_s
+        else
+          return v.to_s
+        end
+      end
+
+      "value changed '#{single_elem_as_string current_value}' to '#{single_elem_as_string new_value}'"
+    end
   end
 
   newproperty(:metadata) do
