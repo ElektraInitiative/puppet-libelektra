@@ -98,8 +98,8 @@ module Puppet
         @kdb_handle = Kdb.open
         @@open_handles << @kdb_handle
         @ks = Kdb::KeySet.new
-        @cascading_key = @resource[:name].gsub(/^\w+\//, '/')
-        puts "do kdb.get ks, #{@cascading_key}" if @verbose
+        @cascading_key = Kdb::Key.new @resource[:name].gsub(/^\w+\//, '/')
+        puts "do kdb.get ks, #{@cascading_key.name}" if @verbose
         @kdb_handle.get @ks, @cascading_key
         @ks.pretty_print if @verbose
       end unless @is_fake_ks
@@ -312,6 +312,22 @@ module Puppet
       end
     end
 
+    # generate an error string from a Kdb::Key
+    def key_get_error_msg(key)
+      return nil unless key.is_a? Kdb::Key
+
+      msg = ""
+      if key.has_meta? 'error'
+        msg += key['error/description'] + "\n"
+        msg += "Reason: #{key['error/reason']}\n"
+        msg += "Error number: ##{key['error/number']}\n"
+        msg += "Module: #{key['error/module']}\n"
+        msg += "Configfile: #{key['error/configfile']}\n"
+        msg += "Mountpoint: #{key['error/mountpoint']}\n"
+      end
+      return msg
+    end
+
 
     # flush is call if a resource was modified
     # thus this method is perfectly suitable for our db.set method which will
@@ -319,10 +335,18 @@ module Puppet
     # also do a kdbclose for this handle
     def flush
       unless @is_fake_ks
-        Puppet.debug "kdbkey/ruby: flush #{@resource[:name]}"
-        @kdb_handle.set @ks, @cascading_key
-        @@open_handles.delete @kdb_handle
-        @kdb_handle.close
+        begin
+          Puppet.debug "kdbkey/ruby: flush #{@resource[:name]}"
+          @kdb_handle.set @ks, @cascading_key
+        rescue
+          # we only care about the error message here, warnings could be
+          # misleading, especially if they do not concern the key we are
+          # manipulating
+          raise Puppet::Error.new key_get_error_msg(@cascading_key)
+        ensure
+          @@open_handles.delete @kdb_handle
+          @kdb_handle.close
+        end
       end
     end
 
