@@ -105,7 +105,12 @@ Puppet::Type.newtype(:kdbkey) do
 
   newproperty(:value, :array_matching => :all) do
     desc <<-EOT
-      Desired value of the key.
+      Desired value of the key. This can be any type, however elektra currently
+      just manages to store String values only. Therefore all types are
+      implicitly converted to Strings.
+
+      If value is an array, the key is managed as an Elektra array. Therefore
+      a subkey named `*name*/#<index>` will be created for each array element.
       EOT
 
     def change_to_s(current_value, new_value)
