@@ -103,7 +103,7 @@ Puppet::Type.newtype(:kdbkey) do
   end
 
 
-  newproperty(:value) do
+  newproperty(:value, :array_matching => :all) do
     desc <<-EOT
       Desired value of the key.
       EOT

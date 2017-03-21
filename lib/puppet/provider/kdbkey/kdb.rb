@@ -44,11 +44,58 @@ module Puppet
     end
 
     def value
-      run_kdb ["sget", "--color=never", @resource[:name], "''"]
+      output = run_kdb ["ls", "--color=never", @resource[:name]]
+      elems = output.split
+
+      unless elems.include? "#{@resource[:name]}/#0"
+        # single value key
+        return [get_key_value(@resource[:name])]
+      else
+        # Array key
+        value = []
+        elems.select do |x|
+          x =~ /^#{@resource[:name]}\/#\d+$/
+        end.each do |x|
+          value << get_key_value(x)
+        end
+        return value
+      end
+
+    end
+
+    def get_key_value(key)
+      return run_kdb ["sget", "--color=never", key, "''"]
     end
 
     def value=(value)
-      run_kdb ["set", @resource[:name], value]
+      remove_from_this_index = 0
+      if not value.is_a? Array
+        set_key_value @resource[:name], value
+
+      elsif value.size == 1
+        set_key_value @resource[:name], value[0]
+
+      else
+        set_key_value @resource[:name], ''
+        value.each_with_index do |elem_value, index|
+          set_key_value "#{@resource[:name]}/##{index}", elem_value
+        end
+        remove_from_this_index = value.size
+      end
+      # remove possible "old" array keys
+      output = run_kdb ["ls", "--color=never", @resource[:name]]
+      output.split.each do |x|
+        if x =~ /^#{@resource[:name]}\/#(\d+)$/
+          index = $1.to_i
+          if index >= remove_from_this_index
+            run_kdb ['rm', x]
+          end
+        end
+      end
+    end
+
+    def set_key_value(key, value)
+      run_kdb ["set", key, value]
     end
 
     def read_metadata_values
@@ -206,7 +253,11 @@ module Puppet
       return unless @metadata_values.is_a? Hash
       Tempfile.open("key") do |file|
         file.puts
-        file.puts " = #{@resource[:value]}"
+        if not @resource[:value].is_a? Array
+          file.puts " = #{@resource[:value]}"
+        else
+          file.puts " = #{@resource[:value][0]}"
+        end
         file.puts
         file.puts "[]"
         @metadata_values.each do |k,v|

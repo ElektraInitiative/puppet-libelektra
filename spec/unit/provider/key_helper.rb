@@ -148,19 +148,103 @@ RSpec.shared_examples "a kdbkey provider" do |not_testable_with_kdb|
       provider.exists?
     end
 
+    context "should read the key's value" do
+      it "for a single string value" do
+        expect(provider.value).to eq ["test"]
+      end
+
+      it "for an Array of strings" do
+        h.ensure_key_exists keyname, ''
+        h.ensure_key_exists "#{keyname}/#0", 'one'
+        h.ensure_key_exists "#{keyname}/#1", 'two'
+        h.ensure_key_exists "#{keyname}/#2", 'three'
+
+        expect(provider.value).to eq ['one', 'two', 'three']
+      end
+    end
+
     context "should update the key value" do
       it "to an arbitrary string" do
         expect(h.key_get_value keyname).to eq "test"
-        provider.value= "some string value"
+        provider.value= ["some string value"]
         provider.flush
         expect(h.key_get_value keyname).to eq "some string value"
       end
 
       it "to an empty string" do
         expect(h.key_get_value keyname).to eq "test"
-        provider.value= ""
+        provider.value= [""]
         provider.flush
         expect(h.key_get_value keyname).to eq ""
+      end
+
+      it "to an truth value" do
+        provider.value= [true]
+        provider.flush
+        expect(h.key_get_value keyname).to eq "true"
+      end
+
+      it "to a numerical value" do
+        provider.value= [5]
+        provider.flush
+        expect(h.key_get_value keyname).to eq "5"
+      end
+
+      it "to an array of strings" do
+        expect(h.key_get_value keyname).to eq "test"
+        provider.value= ['one', 'two']
+        provider.flush
+        expect(h.key_get_value keyname).to eq ''
+        expect(h.key_get_value "#{keyname}/#0").to eq 'one'
+        expect(h.key_get_value "#{keyname}/#1").to eq 'two'
+      end
+
+      it "to an array of different types" do
+        provider.value= ["string", 3, true, 5.5]
+        provider.flush
+        expect(h.key_get_value keyname).to eq ''
+        expect(h.key_get_value "#{keyname}/#0").to eq 'string'
+        expect(h.key_get_value "#{keyname}/#1").to eq '3'
+        expect(h.key_get_value "#{keyname}/#2").to eq 'true'
+        expect(h.key_get_value "#{keyname}/#3").to eq '5.5'
+      end
+
+      it "to an array while removing old array values" do
+        h.ensure_key_exists keyname, ''
+        h.ensure_key_exists "#{keyname}/#0", '1'
+        h.ensure_key_exists "#{keyname}/#1", '2'
+        h.ensure_key_exists "#{keyname}/#2", '3'
+        h.ensure_key_exists "#{keyname}/#3", '4'
+        h.ensure_key_exists "#{keyname}/#4", '5'
+
+        provider.value= ['one', 'two']
+        provider.flush
+
+        expect(h.key_get_value keyname).to eq ''
+        expect(h.key_get_value "#{keyname}/#0").to eq 'one'
+        expect(h.key_get_value "#{keyname}/#1").to eq 'two'
+        expect(h.check_key_exists "#{keyname}/#2").to eq false
+        expect(h.check_key_exists "#{keyname}/#3").to eq false
+        expect(h.check_key_exists "#{keyname}/#4").to eq false
+      end
+
+      it "to an string value while removing old array values" do
+        h.ensure_key_exists keyname, ''
+        h.ensure_key_exists "#{keyname}/#0", '1'
+        h.ensure_key_exists "#{keyname}/#1", '2'
+        h.ensure_key_exists "#{keyname}/#2", '3'
+        h.ensure_key_exists "#{keyname}/#3", '4'
+        h.ensure_key_exists "#{keyname}/#4", '5'
+
+        provider.value= "my new string value"
+        provider.flush
+
+        expect(h.key_get_value keyname).to eq "my new string value"
+        expect(h.check_key_exists "#{keyname}/#0").to eq false
+        expect(h.check_key_exists "#{keyname}/#1").to eq false
+        expect(h.check_key_exists "#{keyname}/#2").to eq false
+        expect(h.check_key_exists "#{keyname}/#3").to eq false
+        expect(h.check_key_exists "#{keyname}/#4").to eq false
       end
     end
 

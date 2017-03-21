@@ -52,7 +52,8 @@ module Puppet
     attr_reader :resource_key
 
     def create
-      @resource_key = Kdb::Key.new @resource[:name], value: @resource[:value]
+      @resource_key = Kdb::Key.new @resource[:name]
+      self.value= @resource[:value] unless @resource[:value].nil?
       self.check= @resource[:check] unless @resource[:check].nil?
       self.metadata= @resource[:metadata] unless @resource[:metadata].nil?
       self.comments= @resource[:comments] unless @resource[:comments].nil?
@@ -102,11 +103,51 @@ module Puppet
     end
 
     def value
-      return @resource_key.value unless @resource_key.nil?
+      return nil if @resource_key.nil?
+      return [@resource_key.value] if @ks.lookup("#{@resource_key.name}/#0").nil?
+
+      # array value
+      value = []
+      @ks.select do |x| 
+        x.name.start_with? "#{@resource_key.name}/#"
+      end.each do
+        |x| value << x.value
+      end
+      value
     end
 
     def value=(value)
-      @resource_key.value= value unless @resource_key.nil?
+      if @resource_key.nil?
+        return
+      end
+
+      remove_from_this_index = 0
+      if not value.is_a? Array
+        @resource_key.value= value.to_s
+
+      elsif value.size == 1
+        @resource_key.value= value[0].to_s
+
+      else
+        @resource_key.value= ''
+        value.each_with_index do |elem_value, index|
+          elem_key_name = "#{@resource_key.name}/##{index}"
+          elem_key = @ks.lookup elem_key_name
+          if elem_key.nil?
+            elem_key = Kdb::Key.new elem_key_name
+            @ks << elem_key
+          end
+          elem_key.value= elem_value.to_s
+        end
+        remove_from_this_index = value.size
+      end
+
+      # remove possible "old" array keys
+      i = remove_from_this_index
+      while not (key = @ks.lookup("#{@resource_key.name}/##{i}")).nil?
+        i += 1
+        @ks.delete key
+      end
     end
 
     # get metadata values as Hash

@@ -122,8 +122,14 @@ describe Puppet::Type.type(:kdbkey) do
 
   context "property 'value'" do
     let(:params) { {:name => "user/test/puppet/x1", :value => "some value"} }
+    let(:params_wo_value) { {:name => "user/test/puppet/x1"} }
+    let(:params_w_array) { {:name => "user/test/puppet/x1", :value => ['one', 'two']} }
     it "exists and is optional" do
-      expect(described_class.new(params)[:value]).to eq(params[:value])
+      expect(described_class.new(params_wo_value)[:value]).to be_nil
+    end
+    it "returns an array of values" do
+      expect(described_class.new(params)[:value]).to eq([params[:value]])
+      expect(described_class.new(params_w_array)[:value]).to eq(params_w_array[:value])
     end
 
   end
