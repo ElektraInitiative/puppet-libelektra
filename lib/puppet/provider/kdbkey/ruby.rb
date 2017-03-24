@@ -302,12 +302,21 @@ module Puppet
       # set meta data on spec_key
       spec_to_set.each do |spec_name, spec_value|
         spec_key[spec_name] = spec_value
+        # also add the check meta data to resource_key directly, they will get
+        # removed by the 'spec' plugin (it the bug is fixed ;)
+        # This is required, since the check is only evaluated if the key has the
+        # appropriate metadata attached. If the spec_key is created with the same
+        # keyset, the resources value will be set before the check can be performed
+        # so we end up with an invalid value for the setting.
+        @resource_key[spec_name] = spec_value
       end
 
       # remove all not specified meta keys from spec_key starting with 'check'
       spec_key.meta.each do |e|
         if e.name.start_with? "check" and !spec_to_set.include? e.name
           spec_key.del_meta e.name
+          # perform same operation on resource_key
+          @resource_key.del_meta e.name
         end
       end
     end

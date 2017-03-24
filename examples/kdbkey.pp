@@ -114,7 +114,7 @@ kdbmount { $ns_validation:
 # (see '$> kdb info type' for other types)
 kdbkey { 'spec/x1':
   prefix    => $ns_validation,
-  value     => 7,
+  value     => 11,
   check     => {
     'range' => '0-10'
   },
