@@ -240,16 +240,19 @@ describe Puppet::Type.type(:kdbkey) do
     RSpec.shared_examples "autorequire kdbmounts" do |keyname, expected|
       it "each possible mountpoint for '#{keyname}'" do
         t = described_class.new({:name => keyname})
-        list = []
-        types = []
+        autoreq = {}
         t.class.eachautorequire do |type,block|
-          types << type
-          list << t.instance_eval(&block)
+          autoreq[type] = t.instance_eval(&block)
         end
-        list.flatten!
 
-        expect(types).to eq [:kdbmount]
-        expect(list).to eq expected
+        expect(autoreq.include? :kdbmount).to be true
+        expect(autoreq.include? :kdbkey).to be true
+
+        expect(autoreq[:kdbmount]).to eq expected
+
+        # kdbkey should not require itself
+        expected.delete keyname
+        expect(autoreq[:kdbkey]).to eq expected
       end
     end
 

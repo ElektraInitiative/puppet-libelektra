@@ -336,7 +336,15 @@ Puppet::Type.newtype(:kdbkey) do
 
   end
 
-   autorequire(:kdbmount) do
+  autorequire(:kdbmount) do
+    get_autorequire_path_names true
+  end
+
+  autorequire(:kdbkey) do
+    get_autorequire_path_names false
+  end
+
+  def get_autorequire_path_names(include_self)
     if self[:name].is_a? String
 
       # split name into path elements, so token separated by '/' not including 
@@ -370,6 +378,9 @@ Puppet::Type.newtype(:kdbkey) do
       names.each do |n|
         req_resources << req_resources.last + "/" + n
       end
+
+      # if include_self == false remove the last entry (equals :name)
+      req_resources.delete self[:name] unless include_self
 
       # if we have a cascading key, we could access any possible Elektra
       # namespace, thus we autorequire all of them
