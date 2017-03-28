@@ -521,6 +521,8 @@ EOT
   context "handle key specifications ('check')" do
     before :example do
       h.ensure_key_is_missing provider.get_spec_key_name
+      h.ensure_key_exists keyname
+      provider.exists?
     end
 
     it "get spec for a single String check" do
