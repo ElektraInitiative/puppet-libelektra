@@ -66,7 +66,13 @@ Puppet::Type.newtype(:kdbkey) do
     desc <<-EOT
       The fully qualified name of the key
 
-      TODO: describe if it is safe or not to use cascading keys?
+      Elektra manages its keys within several namespaces ('system', 'user',
+      'dir'... see https://www.libelektra.org/manpages/elektra-namespaces
+      for more details.)
+
+      Cascading key names (keys starting with a '/') are probably not optimal
+      here, as they are implicitly converted to a key name with the 'dir',
+      'user' or 'system' namespace.
       EOT
 
     # add the prefix, if given
@@ -175,8 +181,8 @@ Puppet::Type.newtype(:kdbkey) do
       and add them as metadata keys to the corresponding keys. This attribute
       allows to manage those comment lines.
 
-      TODO finish this docu
-
+      Multi-line comments (those including a newline character) are implicitly
+      converted to a multi-line comment.
       EOT
 
     def change_to_s(current_value, new_value)

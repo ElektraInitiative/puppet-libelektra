@@ -18,6 +18,8 @@ module Puppet
     @@have_kdb = true
     @@is_fake_ks = false
 
+    has_feature :user
+
     begin
       # load libelektra Ruby binding extension
       require 'kdb'
