@@ -326,14 +326,6 @@ Puppet::Type.newtype(:kdbkey) do
     namespace (starting with 'user/').
     EOT
 
-    # misuse the validate method, to change the provider, if required
-    validate do |value|
-      if provider.class.name != :kdb
-        Puppet.debug "Puppet::Type::Kdbkey: change provider to 'kdb' (required by param 'user')"
-        @resource.provider= :kdb
-      end
-    end
-
   end
 
   autorequire(:kdbmount) do

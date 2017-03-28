@@ -7,7 +7,7 @@
 # @copyright BSD License (see LICENSE or http://www.libelektra.org)
 #
 #
-
+require 'etc'
 require 'puppet/provider/kdbkey/common'
 
 module Puppet
@@ -50,6 +50,55 @@ module Puppet
 
     # allow access to internal key, used during testing
     attr_reader :resource_key
+
+
+    def do_asuser(proc_obj)
+      unless @resource[:user].nil?
+        Puppet::Util::SUIDManager.asuser(@resource[:user]) do
+
+          old_user = ENV['USER']
+          old_home = ENV['HOME']
+          old_xdg = ENV['XDG_CONFIG_HOME']
+
+          if @resource[:user] =~ /^\d+/
+            # we got a numeric user argument try to convert to user name
+            begin
+              user = Etc.getpwuid(@resource[:user].to_i).name
+            rescue
+              user = @resource[:user]
+            end
+          else
+            user = @resource[:user]
+          end
+
+          ENV['USER'] = user
+          begin
+            # if passwd entry for user does not exist, this will trigger an
+            # ArgumentError
+            ENV['HOME'] = Etc.getpwnam(user).dir
+          rescue
+            ENV['HOME'] = ''
+          end
+
+          ENV['XDG_CONFIG_HOME'] = ''
+
+          begin
+            Puppet.debug("do_asuser: euid: #{Process.euid} " +
+                         "user: #{@resource[:user]} " +
+                         "HOME: #{ENV['HOME']} " +
+                         "USER: #{ENV['USER']} ")
+            proc_obj.call
+          rescue
+            ENV['USER'] = old_user
+            ENV['HOME'] = old_home
+            ENV['XDG_CONFIG_HOME'] = old_xdg
+          end
+        end
+      else
+        proc_obj.call
+      end
+
+    end
 
     def create
       @resource_key = Kdb::Key.new @resource[:name]
@@ -94,15 +143,21 @@ module Puppet
       # - a better strategy would be to use one handle and keyset per mountpoint. But for
       #   the moment this is too complicated (e.g. how to proceed with cascading keys?)
       #
-      begin
+      open_proc = Proc.new do
         @kdb_handle = Kdb.open
         @@open_handles << @kdb_handle
         @ks = Kdb::KeySet.new
         @cascading_key = Kdb::Key.new @resource[:name].gsub(/^\w+\//, '/')
         puts "do kdb.get ks, #{@cascading_key.name}" if @verbose
         @kdb_handle.get @ks, @cascading_key
+        Puppet.debug "reading from config file '#{@cascading_key.value}'"
         @ks.pretty_print if @verbose
-      end unless @is_fake_ks
+      end
+
+      unless @is_fake_ks
+        do_asuser open_proc
+      end
+
       @resource_key = @ks.lookup @resource[:name]
       puts "resource key nil? #{@resource_key.nil?}" if @verbose
       return !@resource_key.nil?
@@ -343,7 +398,7 @@ module Puppet
     # finally bring the changes to disk
     # also do a kdbclose for this handle
     def flush
-      unless @is_fake_ks
+      close_proc = Proc.new do
         begin
           Puppet.debug "kdbkey/ruby: flush #{@resource[:name]}"
           @kdb_handle.set @ks, @cascading_key
@@ -356,6 +411,10 @@ module Puppet
           @@open_handles.delete @kdb_handle
           @kdb_handle.close
         end
+      end
+
+      unless @is_fake_ks
+        do_asuser close_proc
       end
     end
 
