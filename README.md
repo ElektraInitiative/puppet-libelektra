@@ -218,15 +218,15 @@ key database.
 
 #### Parameters
 
-* `name`: The fully qualified name of the key
+* `name`: The fully qualified name of the key.
 * `ensure`: The basic property that the resource should be in.
 * `value`: Desired value of the key.
-* `prefix`: Prefix for the key name (optional)
+* `prefix`: Prefix for the key name (optional).
 * `check`: Add value validation.
-* `comments`: comments for this key
-* `user`: define/modify key in the context of given user.
+* `comments`: Comments for this key.
+* `user`: Define or modify key in the context of given user.
 * `metadata`: Metadata for this key supplied as Hash of key-value pairs.
-* `purge_meta_keys`: manage complete set of metadata keys
+* `purge_meta_keys`: Manage complete set of metadata keys.
 * `provider`: The specific backend to use for this `kdbkey` resource.
 
 ##### Parameter Details
@@ -240,7 +240,7 @@ key database.
   specifications.
 
   The value for this property can be either a single String or a Hash
-  of settings. The following plugins are currently available.
+  of settings. The following plugins were tested with puppet-elektra:
 
   * `path`: check for an absolute path name
 
@@ -336,7 +336,7 @@ key database.
     }
     ```
 
-  For further check plugins see the Elektra
+  For further plugins see the Elektra
   [plugin documentation](https://www.libelektra.org/plugins/readme).
 
   Note: for each 'check/xxx' metadata, required by the Elektra plugins, just
@@ -382,7 +382,7 @@ key database.
   Elektra manages its keys within several namespaces ('system', 'user',
   'dir'... see
   [Elektra-namespaces](https://www.libelektra.org/manpages/elektra-namespaces)
-  for more details.)
+  for details.)
 
   Cascading key names (keys starting with a '/') are probably not optimal
   here, as they are implicitly converted to a key name with the 'dir',
@@ -536,7 +536,7 @@ resource types (kdbkey and kdbmount) are usable only.
 This module is hosted under
 https://github.com/ElektraInitiative/puppet-libelektra
 
-Contribution welcome ;)
+Contributions welcome ;)
 
 ## Release Notes
 
