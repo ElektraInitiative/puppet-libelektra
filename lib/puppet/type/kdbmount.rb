@@ -78,9 +78,9 @@ Puppet::Type.newtype(:kdbmount) do
       If set to true, Elektra will add recommended plugins to the mounted
       backend configuration.
       Recommended plugins are: #{RECOMMENDED_PLUGINS.join ', '}
-      Default: false
+      Default: true
     EOT
-    defaultto :false
+    defaultto :true
   end
 
 
