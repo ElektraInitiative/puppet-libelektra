@@ -66,7 +66,6 @@ module Puppet
     end
 
     def destroy
-      puts "kdb destroy"
       kdb ["umount", @resource[:name]]
     end
 
