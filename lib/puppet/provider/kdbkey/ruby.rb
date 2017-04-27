@@ -36,9 +36,9 @@ module Puppet
     confine :true => @@have_kdb
 
     # remember all opened kdb handles
-    # since there is not suitable way to a propper provider instance
+    # since there is not suitable way to a proper provider instance
     # cleanup.
-    # The flush method is only called, if the underlaying resource was
+    # The flush method is only called, if the underlying resource was
     # modified.
     # All opened handles will be closed on 'self.post_resource_eval'
     # which is done once per provider class.
@@ -128,10 +128,10 @@ module Puppet
 
       # this is the first method call for a managed resource
       # so, here we have to do a kdb.open
-      # all opend kdb objects are used by later methods so keep them
+      # all opened kdb objects are used by later methods so keep them
       #
       # note: for the moment we do a kdb.open/get/set for EACH managed
-      # kdbkey resource separately. This results in a opened kdb handle
+      # kdbkey resource separately. This results in an opened kdb handle
       # and keySet for each manged key. This strategy is required, since
       # we might have modified the underlying Elektra key space
       # (a changed/added mountpoint after the actual kdb.open).
@@ -214,8 +214,8 @@ module Puppet
     end
 
     # get metadata values as Hash
-    # note: in order to not trigger an refresh cycle, we have to be careful which
-    # keys should be returned. It 'purge_meta_keys?' is not set, we have to remove
+    # note: in order not to trigger an refresh cycle, we have to be careful which
+    # keys should be returned. If 'purge_meta_keys?' is not set, we have to remove
     # the not-specified metakeys from the result set.
     def metadata
       #key.meta.to_h unless key.nil? ruby 1.9 does not have Enumerable.to_h :(
@@ -360,11 +360,11 @@ module Puppet
       spec_to_set.each do |spec_name, spec_value|
         spec_key[spec_name] = spec_value
         # also add the check meta data to resource_key directly, they will get
-        # removed by the 'spec' plugin (it the bug is fixed ;)
+        # removed by the 'spec' plugin (if the plugin placement bug is fixed ;)
         # This is required, since the check is only evaluated if the key has the
         # appropriate metadata attached. If the spec_key is created with the same
         # keyset, the resources value will be set before the check can be performed
-        # so we end up with an invalid value for the setting.
+        # so we might end up with an invalid value for the setting.
         @resource_key[spec_name] = spec_value
       end
 

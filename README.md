@@ -472,8 +472,11 @@ writing the configuration file.
 
 * `add_recommended_plugins`: If set to true, Elektra will add recommended
   plugins to the mounted backend configuration.
-  Recommended plugins are: sync
-  Default: false
+  Recommended plugins are defined by metadata of specified plugins. E.g. the
+  `hosts` plugins recommends `glob`, `error` and `network`. So, if mounting a
+  file with the `hosts` plugin and this parameter set to `true` all four
+  plugins will be used for mounting.
+  Default: true
 
   Valid values are `true`, `false`, `yes`, `no`.
 
@@ -481,11 +484,13 @@ writing the configuration file.
 
   Valid values are `present`, `absent`.
 
-* `file`: The configuration file to mount into the Elektra key database.
+* `file`: (**mandatory**) The configuration file to mount into the Elektra
+  key database.
 
 * `name`: The fully qualified mount path within the libelektra key database.
 
-* `plugins`: A list of libelektra plugins with optional configuration settings
+* `plugins`: (**mandatory**) A list of libelektra plugins with optional
+  configuration settings
   use for mounting.
 
   The following value formats are acceped:
