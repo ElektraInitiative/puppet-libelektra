@@ -253,7 +253,7 @@ module Puppet
       # mountpoint
       mpk = Kdb::Key.new @resource[:name]
       unless mpk.is_valid?
-        raise Puppet::Error "invalid mountpoint: #{@resource[:name]}"
+        raise Puppet::Error, "invalid mountpoint: #{@resource[:name]}"
       end
 
       # add new mount point, checks for mountpoint validity and
@@ -267,9 +267,9 @@ module Puppet
 
       backend.need_plugin "storage"
 
-      @resource.class.const_get(:RECOMMENDED_PLUGINS).each do |p|
-        backend.recommend_plugin p
-      end
+      #@resource.class.const_get(:RECOMMENDED_PLUGINS).each do |p|
+      #  backend.recommend_plugin p
+      #end
 
       plugin_config = convert_plugin_settings(@resource[:plugins])
       # add user requested plugins
@@ -284,8 +284,12 @@ module Puppet
       # resolv all required plugins (without recommended (false))
       backend.resolve_needs @resource[:add_recommended_plugins]
 
-      # add new backend to mount config
-      backend.serialize mountconf
+      begin
+        # add new backend to mount config
+        backend.serialize mountconf
+      rescue
+        raise Puppet::Error, "unable to create mountpoint; #{$!}"
+      end
     end
 
 
