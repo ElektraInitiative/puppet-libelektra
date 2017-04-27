@@ -137,4 +137,16 @@ Puppet::Type.newtype(:kdbmount) do
     /^\w+$/ =~ name
   end
 
+  validate do
+    # make :file and :plugins properties mandatory if one of them are used
+    if @parameters.include?(:plugins)
+      self.fail("file property missing") unless @parameters.include?(:file)
+    end
+
+    if @parameters.include?(:file)
+      self.fail("plugins property missing") unless @parameters.include?(:plugins)
+    end
+  end
+
+
 end

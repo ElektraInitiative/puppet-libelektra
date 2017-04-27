@@ -75,23 +75,38 @@ describe Puppet::Type.type(:kdbmount) do
       :name    => "user/test/puppet"
       }
     }
-    it "exists and is optionsl" do
+    it "exists and is optional if file is not used" do
       expect(described_class.new(params)[:plugins]).to be_nil
     end
 
+    it "exists and is mandatory if file is set" do
+      params[:file] = 'somefile.txt'
+      expect { described_class.new(params) }.to raise_error(Puppet::Error)
+    end
+
     it "accepts a string" do
+      params[:file] = 'somefile.ini'
       params[:plugins] = "ini"
       expect(described_class.new(params)[:plugins]).to eq ["ini"]
     end
 
     it "accepts an array of strings" do
+      params[:file] = 'somefile.ini'
       params[:plugins] = ["ini", "type"]
       expect(described_class.new(params)[:plugins]).to eq ["ini", "type"]
     end
 
-    it "accepts a plugin name with corresponding configuration settings" do
+    it "accepts an array with plugin name with corresponding configuration settings" do
+      params[:file] = 'somefile.ini'
       params[:plugins] = ["ini", {"seperator" => " ", "array" => ""}]
       expect(described_class.new(params)[:plugins]).to eq params[:plugins]
+    end
+
+    it "accepts a Hash with plugin name with corresponding configuration settings" do
+      params[:file] = 'somefile.ini'
+      params[:plugins] = {"ini" => {"seperator" => " ", "array" => ""}}
+      # we always get an Array back
+      expect(described_class.new(params)[:plugins]).to eq [params[:plugins]]
     end
 
     RSpec.shared_examples "invalid plugin names" do |plugins|

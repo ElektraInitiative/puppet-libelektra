@@ -481,11 +481,13 @@ writing the configuration file.
 
   Valid values are `present`, `absent`.
 
-* `file`: The configuration file to mount into the Elektra key database.
+* `file`: (**mandatory**) The configuration file to mount into the Elektra
+  key database.
 
 * `name`: The fully qualified mount path within the libelektra key database.
 
-* `plugins`: A list of libelektra plugins with optional configuration settings
+* `plugins`: (**mandatory**) A list of libelektra plugins with optional
+  configuration settings
   use for mounting.
 
   The following value formats are acceped:
