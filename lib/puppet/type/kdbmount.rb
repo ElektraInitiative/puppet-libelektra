@@ -109,20 +109,73 @@ Puppet::Type.newtype(:kdbmount) do
     validate do |value|
       if value.is_a? String
         unless @resource.class.plugin_name_is_valid? value
-          raise ArgumentError, "'%s' is not a vlid plugin name" % value
+          raise ArgumentError, "'%s' is not a valid plugin name" % value
         end
       end
     end
     # this can't be done here, since we get each value at once for
     # munge, thus one munge call for each array entry.
-    #munge do |plugins|
-    #  # convert plugins array to a hash
+    #munge do |plugin|
     #end
 
-    # TODO implement this to allow better plugins handling
-    #def insync?(value)
-    #  puts "insync? #{value}"
-    #  false
+    # customized insync? method to handle more complex cases.
+    # a plugin can have dependencies and can recommend other plugins, therefore
+    # during mounting a plugin, Elektra might add additional plugins. So the
+    # is and should in two subsequent runs might differ.
+    # This method checks,
+    # - if we have to add a newly specified plugin (not found in the current
+    #    mounted plugin list) 
+    # - if we really have to remove a plugin
+    # - if plugin config settings have changed
+    def insync?(is)
+      #puts "insync? is: #{is}, should #{should}"
+      return false unless provider.respond_to? :resolve_plugins
+
+      # convert to plugins-config Hash
+      my_is = provider.convert_plugin_settings is
+      my_should = provider.convert_plugin_settings should
+
+
+      # fist, check if all :should plugins are in :is plugins array
+      # so, is there a plugin missing?
+      return false if my_should.keys.any? { |p| not my_is.include? p }
+
+      # pass the :should plugins list to libelektra to get a list plugins that
+      # will be used when mounting is done with these
+      # (honores :add_recommended_plugins parameter)
+      resolved = provider.resolve_plugins my_should.keys
+      will_use_plugins = resolved.values.flatten.uniq
+
+      #puts "resolved: #{resolved}"
+      #puts "will_use_plugins: #{will_use_plugins}"
+
+      # now, check if plugins should be removed
+      # if we have mounted a plugin, which is not in the list of plugins which
+      # will be used when mounting with the :should plugins, we have to remove
+      # it
+      my_is.keys.each do |is_plugin|
+        return false unless will_use_plugins.include? is_plugin
+      end
+
+      # now do the reverse order, check if all will use are actually used
+      # (this is possible if someone switches :add_recommended_plugins
+      #  from false to true)
+      will_use_plugins.each do |p|
+        return false unless my_is.include? p
+      end
+
+      # finally, check if some plugin configuration has changed
+      my_should.each do |plugin, config|
+        return false unless my_is.include? plugin
+        return false unless my_is[plugin] == config
+      end
+
+      true
+    end
+
+    # TODO: add nice formating messages when changing plugins
+    #def change_to_s(cur_value, new_value)
+    #  return "changed: will_use_plugins: #{@will_use_plugins}"
     #end
 
   end

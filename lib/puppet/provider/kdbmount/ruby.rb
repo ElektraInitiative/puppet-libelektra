@@ -91,7 +91,7 @@ module Puppet
         perform_kdb_action backend_root do |mountconf|
 
           if path_key.nil?
-            raise Puppet::Error.new "path key not found in backend config"
+            raise Puppet::Error, "path key not found in backend config"
           end
 
           path_key.value = @resource[:file]
@@ -121,6 +121,61 @@ module Puppet
     #  puts @property_hash
     #  puts "plugins: #{@resource[:plugins]}"
     #end
+
+
+    def resolve_plugins(plugins)
+      result = {}
+      plugins.each do |plugin|
+        backend = Kdbtools::MountBackendBuilder.new
+        backend.add_plugin Kdbtools::PluginSpec.new(plugin)
+        backend.resolve_needs @resource[:add_recommended_plugins]
+        backend.to_add.each do |ps|
+          result[plugin] ||= []
+          result[plugin] << ps.name
+          result[plugin] << ps.refname if ps.name != ps.refname
+        end
+      end
+      return result
+    end
+
+
+    # convert the Puppet given :plugins value to a more suitable
+    # hash:
+    #   pluginname => plugin config settings
+    #
+    # Puppet will give us an array of values, combining plugin names and
+    # config settings. e.g.
+    # ["ini", {"delimiter" => " ", "setting2" => "aa"}, "type"]
+    #
+    # e.g:
+    #   ini => {
+    #     delimiter => " "
+    #     array     => ""
+    #   },
+    #   type => { }
+    #
+    def convert_plugin_settings(plugins)
+      config = {}
+      cur_plugin = nil
+      if plugins.is_a? Array and plugins.size == 1 and plugins[0].is_a? Hash
+        # if we have a single array element and this is a Hash, user has passed
+        # a Hash object to plugins property
+        config = plugins[0]
+      elsif plugins.is_a? Array
+        plugins.each do |e|
+          if e.is_a? String
+            cur_plugin = e
+            config[e] = {}
+          elsif e.is_a? Hash
+            config[cur_plugin] = e
+          else
+            raise Puppet::Error, "invalid plugins configuration given"
+          end
+        end
+      end
+      return config
+    end
+
 
     private
 
@@ -192,40 +247,6 @@ module Puppet
     end
 
 
-    # convert the Puppet given :plugins value to a more suitable
-    # hash:
-    #   pluginname => plugin config settings
-    #
-    # Puppet will give us an array of values, combining plugin names and
-    # config settings. e.g.
-    # ["ini", {"delimiter" => " ", "setting2" => "aa"}, "type"]
-    #
-    # e.g:
-    #   ini => {
-    #     delimiter => " "
-    #     array     => ""
-    #   },
-    #   type => { }
-    #
-    def convert_plugin_settings(plugins)
-      config = {}
-      cur_plugin = nil
-      if plugins.respond_to? :each
-        plugins.each do |e|
-          if e.is_a? String
-            cur_plugin = e
-            config[e] = {}
-          elsif e.is_a? Hash
-            config[cur_plugin] = e
-          else
-            Puppet::Error "invalid plugins configuration given"
-          end
-        end
-      end
-      return config
-    end
-
-
     # helper function to modify Elektra key database
     # helps to avoid multiple Kdb.open/close sequences
     #
@@ -242,7 +263,7 @@ module Puppet
     end
 
 
-    # create a new mount point and add it the the existing
+    # create a new mount point and add it to the existing
     # mount config (fetched from system/elektra/mountpoints
     # use with perform_kdb_action
     #
@@ -267,13 +288,45 @@ module Puppet
 
       backend.need_plugin "storage"
 
-      #@resource.class.const_get(:RECOMMENDED_PLUGINS).each do |p|
-      #  backend.recommend_plugin p
-      #end
+      plugins = convert_plugin_settings(@resource[:plugins])
+      plugins_to_mount = {}
+      # for each plugin get all dependent (and if req. recommended) plugins
+      resolved_plugins = resolve_plugins plugins.keys
 
-      plugin_config = convert_plugin_settings(@resource[:plugins])
+      plugins.each do |name, config|
+        # if user has specified a plugin configuration, we have to use this
+        # plugin for mounting
+        unless config.empty?
+          plugins_to_mount[name] = config
+        end
+
+        # check if this plugin would be added by any other plugin through
+        # dependency or recommends lists.
+        # If so do not explicetly for mounting, since this might lead to
+        # ordering or placement errors
+        use_plugin = true
+        resolved_plugins.each do |other, depends|
+          next if other == name
+          if depends.include? name
+            use_plugin = false
+          end
+        end
+
+        if use_plugin
+          plugins_to_mount[name] = config
+        end
+      end
+
+      all_used_plugins = resolved_plugins.values.flatten.uniq.sort
+      if plugins.keys.sort != all_used_plugins
+        Puppet.notice "#{@resource}: using additional plugins: #{(all_used_plugins - plugins.keys.sort)}"
+      end
+
+      #puts "should plugins: #{plugins}"
+      #puts "actually used: #{plugins_to_mount}"
+
       # add user requested plugins
-      plugin_config.each do |p_name, p_config|
+      plugins_to_mount.each do |p_name, p_config|
         ps = Kdbtools::PluginSpec.new p_name
         p_config.each do |k, v|
           ps.append_config Kdb::KeySet.new Kdb::Key.new("user/#{k}", value: v)

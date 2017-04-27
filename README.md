@@ -472,8 +472,11 @@ writing the configuration file.
 
 * `add_recommended_plugins`: If set to true, Elektra will add recommended
   plugins to the mounted backend configuration.
-  Recommended plugins are: sync
-  Default: false
+  Recommended plugins are defined by metadata of specified plugins. E.g. the
+  `hosts` plugins recommends `glob`, `error` and `network`. So, if mounting a
+  file with the `hosts` plugin and this parameter set to `true` all four
+  plugins will be used for mounting.
+  Default: true
 
   Valid values are `true`, `false`, `yes`, `no`.
 
