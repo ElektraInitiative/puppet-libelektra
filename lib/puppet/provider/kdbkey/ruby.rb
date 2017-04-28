@@ -282,6 +282,7 @@ module Puppet
     # update comments
     #
     def comments=(value)
+      default_comment_start = '#'
       # why do we have to init this inst var again???
       @comments_key_name ||= "comments"
       # split specified comment into lines
@@ -290,10 +291,16 @@ module Puppet
       comment_lines.each_with_index do |line, index|
         puts "comments keyname: #{@comments_key_name}" if @verbose
         # currently hosts plugin treats #0 comment as inline comment
-        #@resource_key.set_meta array_key_name(@comments_key_name, index + 1), "##{line}"
-        @resource_key.set_meta array_key_name(@comments_key_name, index), "##{line}"
+        if @resource_key.has_meta? "#{array_key_name @comments_key_name, index}/start"
+          comment_start = ""
+        else
+          comment_start = default_comment_start
+        end
+        @resource_key.set_meta array_key_name(@comments_key_name, index), "#{comment_start}#{line}"
+        if index == 0
+          @resource_key.set_meta "#{array_key_name @comments_key_name, index}/space", "1" 
+        end
       end
-      #@resource_key.set_meta "#{@comments_key_name}/#0", ''
 
       # iterate over all meta keys and remove all comment keys which
       # represent a comment line, which does not exist any more

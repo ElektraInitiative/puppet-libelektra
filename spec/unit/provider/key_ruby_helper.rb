@@ -114,7 +114,8 @@ class KdbKeyProviderHelper
     key = @ks.lookup keyname
     unless key.nil?
       key.meta.find_all do |e|
-        e.name.start_with? COMMENT+"/#"
+        #e.name.start_with? COMMENT+"/#"
+        e.name =~ /#{COMMENT}+\/#\d+$/
       end.each do |c|
         comment = [] if comment.nil?
         if c.value.start_with? "#"

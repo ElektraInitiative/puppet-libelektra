@@ -128,6 +128,8 @@ module Puppet
             next
           end
           next if metadata_reached == false
+          # end of metadata reached
+          break if line.empty?
 
           key_name, key_value = line.split(" = ")
           key_name.strip!
