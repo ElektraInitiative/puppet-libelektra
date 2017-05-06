@@ -115,7 +115,7 @@ module Puppet
       @ks.delete @resource[:name] unless @resource_key.nil?
       # check if there are array keys left
       @ks.each do |x|
-        if x.name =~ /^#{@resource[:name]}\/#\d+$/
+        if x.name =~ /^#{@resource[:name]}\/#_*\d+$/
           @ks.delete x
         end
       end
@@ -172,7 +172,7 @@ module Puppet
       # array value
       value = []
       @ks.each do |x| 
-        if x.name =~ /^#{@resource_key.name}\/#\d+$/
+        if x.name =~ /^#{@resource_key.name}\/#_*\d+$/
           value << x.value
         end
       end
@@ -194,7 +194,7 @@ module Puppet
       else
         @resource_key.value= ''
         value.each_with_index do |elem_value, index|
-          elem_key_name = "#{@resource_key.name}/##{index}"
+          elem_key_name = array_key_name @resource_key.name, index
           elem_key = @ks.lookup elem_key_name
           if elem_key.nil?
             elem_key = Kdb::Key.new elem_key_name
@@ -207,7 +207,7 @@ module Puppet
 
       # remove possible "old" array keys
       i = remove_from_this_index
-      while not (key = @ks.lookup("#{@resource_key.name}/##{i}")).nil?
+      while not (key = @ks.lookup(array_key_name @resource_key.name, i)).nil?
         i += 1
         @ks.delete key
       end
@@ -268,7 +268,7 @@ module Puppet
       # search for all meta keys which names starts with 'comments/#'
       # and concat its values line by line
       @resource_key.meta.each do |e|
-        if /^(comments?)\/#/ =~ e.name
+        if /^(comments?)\/#_*\d+$/ =~ e.name
           puts "update comments key name to #{$1}" if @verbose
           @comments_key_name = $1
           comments << "\n" unless first
@@ -290,15 +290,15 @@ module Puppet
       comment_lines.each_with_index do |line, index|
         puts "comments keyname: #{@comments_key_name}" if @verbose
         # currently hosts plugin treats #0 comment as inline comment
-        #@resource_key.set_meta "#{@comments_key_name}/##{index + 1}", "##{line}"
-        @resource_key.set_meta "#{@comments_key_name}/##{index}", "##{line}"
+        #@resource_key.set_meta array_key_name(@comments_key_name, index + 1), "##{line}"
+        @resource_key.set_meta array_key_name(@comments_key_name, index), "##{line}"
       end
       #@resource_key.set_meta "#{@comments_key_name}/#0", ''
 
       # iterate over all meta keys and remove all comment keys which
       # represent a comment line, which does not exist any more
       @resource_key.meta.each do |e|
-        if e.name.match(/^#{@comments_key_name}\/#(\d+)$/)
+        if e.name.match(/^#{@comments_key_name}\/#_*(\d+)$/)
           index = $1.to_i
           if comment_lines[index].nil?
             @resource_key.del_meta e.name
@@ -325,7 +325,7 @@ module Puppet
         spec_key.meta.each do |m|
           if /^check\/(.*)$/ =~ m.name
             check_name = $1
-            if /^(\w+)\/#\d+$/ =~ check_name
+            if /^(\w+)\/#_*\d+$/ =~ check_name
               spec_hash[$1] = [] unless spec_hash[$1].is_a? Array
               spec_hash[$1] << m.value
             else
