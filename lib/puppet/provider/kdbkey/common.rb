@@ -36,6 +36,12 @@ class Puppet::Provider::KdbKeyCommon < Puppet::Provider
       return false
     end
 
+    def array_key_name(name, index)
+      index_str = index.to_s
+      (1..(index.to_s.size - 1)).each { index_str = "_#{index_str}" }
+      "#{name}/##{index_str}"
+    end
+
     def get_spec_key_name(keyname = @resource[:name])
       return keyname.gsub(/^\w*\//, "spec/")
     end

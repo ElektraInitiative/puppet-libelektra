@@ -36,7 +36,7 @@ module Puppet
       run_kdb ["rm", @resource[:name]]
       # remove possible array elements
       list_keys.each do |x|
-        if x =~ /#{@resource[:name]}\/#\d+/
+        if x =~ /#{@resource[:name]}\/#_*\d+/
           run_kdb ["rm", x]
         end
       end
@@ -64,7 +64,7 @@ module Puppet
         # Array key
         value = []
         elems.select do |x|
-          x =~ /^#{@resource[:name]}\/#\d+$/
+          x =~ /^#{@resource[:name]}\/#_*\d+$/
         end.each do |x|
           value << get_key_value(x)
         end
@@ -88,7 +88,7 @@ module Puppet
       else
         set_key_value @resource[:name], ''
         value.each_with_index do |elem_value, index|
-          set_key_value "#{@resource[:name]}/##{index}", elem_value
+          set_key_value array_key_name(@resource[:name], index), elem_value
         end
         remove_from_this_index = value.size
       end
@@ -128,6 +128,8 @@ module Puppet
             next
           end
           next if metadata_reached == false
+          # end of metadata reached
+          break if line.empty?
 
           key_name, key_value = line.split(" = ")
           key_name.strip!
@@ -201,7 +203,7 @@ module Puppet
 
       @metadata_values["comments"] = "##{comment_lines.size}"
       comment_lines.each_with_index do |line, index|
-        @metadata_values["comments/##{index}"] = line
+        @metadata_values[array_key_name "comments", index] = line
       end
     end
 
