@@ -45,23 +45,38 @@ module Puppet
       cmd_args << "-W" if @resource[:add_recommended_plugins]
       cmd_args << @resource[:file]
       cmd_args << @resource[:name]  # mountpoint
+      puts "plugins: #{@resource[:plugins]}"
       if @resource[:plugins].is_a? Array
-        @resource[:plugins].each do |e|
-          # build plugin config cmdline argument
-          if e.is_a? Hash
+        if @resource[:plugins][0].is_a? Hash
+          @resource[:plugins][0].each do |plugin, params|
+            puts "here, params: #{params.inspect}"
+            cmd_args << plugin
             config_line = ''
-            e.each do |k,v|
+            params.each do |k, v|
               config_line << "," unless config_line.empty?
               config_line << "#{k}=#{v}"
             end
-            cmd_args << config_line
-          else
-            # plain plugin name
-            cmd_args << e
+            cmd_args << config_line unless config_line.empty?
+          end
+        else
+          @resource[:plugins].each do |e|
+            # build plugin config cmdline argument
+            if e.is_a? Hash
+              config_line = ''
+              e.each do |k,v|
+                config_line << "," unless config_line.empty?
+                config_line << "#{k}=#{v}"
+              end
+              cmd_args << config_line
+            else
+              # plain plugin name
+              cmd_args << e
+            end
           end
         end
       end
       cmd_args.flatten!
+      puts "cmd_args: #{cmd_args.inspect}"
       kdb(cmd_args)
     end
 
