@@ -8,7 +8,7 @@
 #
 #
 require 'etc'
-require 'puppet/provider/kdbkey/common'
+require_relative 'common'
 
 module Puppet
   Type.type(:kdbkey).provide :ruby, :parent => Puppet::Provider::KdbKeyCommon do

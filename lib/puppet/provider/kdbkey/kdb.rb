@@ -8,7 +8,7 @@
 #
 #
 
-require 'puppet/provider/kdbkey/common'
+require_relative 'common'
 require 'tempfile'
 
 module Puppet
